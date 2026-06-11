@@ -1,0 +1,1270 @@
+
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎪 전시 주문관리 · lowlit collective</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<style>
+  :root{
+    --bg:#f6f6f4; --card:#fff; --ink:#1a1a1a; --sub:#8a8a86; --line:#ececea;
+    --accent:#111; --green:#22a559; --amber:#e8a020; --red:#d94f3d; --blue:#3a6fd8;
+    --radius:14px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif; background:var(--bg); color:var(--ink); font-size:14px;}
+  .wrap{max-width:1180px; margin:0 auto; padding:24px 20px 60px;}
+
+  header.top{display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:18px;}
+  .brand{font-weight:800; font-size:15px; letter-spacing:-.2px;}
+  .brand small{display:block; font-weight:500; color:var(--sub); font-size:11px; margin-top:2px;}
+  .ev-bar{display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
+  .ev-bar select{font-weight:700; font-size:14px; min-width:220px;}
+
+  nav.tabs{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:18px;}
+  nav.tabs button{border:none; background:#ededeb; color:#555; padding:9px 16px; border-radius:999px; font-size:13.5px; font-weight:600; cursor:pointer;}
+  nav.tabs button.on{background:var(--accent); color:#fff;}
+
+  .card{background:var(--card); border-radius:var(--radius); padding:20px; box-shadow:0 1px 2px rgba(0,0,0,.04); margin-bottom:16px;}
+  .card h2{font-size:15px; margin-bottom:14px; display:flex; align-items:center; gap:6px; flex-wrap:wrap;}
+  .card h2 .hint{font-size:11.5px; color:var(--sub); font-weight:400;}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+  @media(max-width:860px){.grid2{grid-template-columns:1fr;}}
+
+  label.f{display:block; font-size:11.5px; color:var(--sub); margin-bottom:4px; font-weight:600;}
+  input[type=text],input[type=tel],input[type=email],input[type=number],input[type=date],select,textarea{
+    width:100%; border:1px solid var(--line); border-radius:9px; padding:9px 11px; font-size:13.5px; background:#fafafa; font-family:inherit;
+  }
+  input:focus,select:focus,textarea:focus{outline:none; border-color:#aaa; background:#fff;}
+  textarea{resize:vertical; min-height:64px;}
+  .row{display:flex; gap:10px; margin-bottom:10px; flex-wrap:wrap;}
+  .row>div{flex:1; min-width:130px;}
+
+  .btn{border:none; cursor:pointer; border-radius:9px; padding:10px 18px; font-size:13.5px; font-weight:700; font-family:inherit;}
+  .btn-dark{background:var(--accent); color:#fff;}
+  .btn-ghost{background:#efefed; color:#333;}
+  .btn-line{background:#fff; border:1px solid var(--line); color:#333;}
+  .btn-sm{padding:5px 10px; font-size:12px; border-radius:7px;}
+  .btn-red{background:#fdeeec; color:var(--red);}
+  .btn:active{transform:translateY(1px);}
+
+  table{width:100%; border-collapse:collapse;}
+  th{font-size:11.5px; color:var(--sub); text-align:left; padding:8px 10px; border-bottom:1px solid var(--line); font-weight:600; white-space:nowrap;}
+  td{padding:9px 10px; border-bottom:1px solid #f3f3f1; font-size:13px; vertical-align:middle;}
+  tr:last-child td{border-bottom:none;}
+  .num{text-align:right; font-variant-numeric:tabular-nums;}
+  th.num{text-align:right;}
+
+  .pill{display:inline-block; padding:3px 9px; border-radius:999px; font-size:11.5px; font-weight:700;}
+  .p-green{background:#e7f6ec; color:var(--green);}
+  .p-amber{background:#fcf3e2; color:var(--amber);}
+  .p-red{background:#fdeeec; color:var(--red);}
+  .p-blue{background:#e9effb; color:var(--blue);}
+  .p-gray{background:#efefed; color:#777;}
+
+  .stat-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-bottom:16px;}
+  .stat{background:var(--card); border-radius:var(--radius); padding:16px 18px;}
+  .stat .k{font-size:11.5px; color:var(--sub); font-weight:600;}
+  .stat .v{font-size:22px; font-weight:800; margin-top:4px; letter-spacing:-.5px;}
+  .stat .s{font-size:11px; color:var(--sub); margin-top:3px;}
+
+  .alert-item{display:flex; gap:10px; align-items:flex-start; padding:11px 13px; border-radius:10px; margin-bottom:8px; font-size:13px; line-height:1.55;}
+  .a-push{background:#eef5ee;}
+  .a-low{background:#fcf3e2;}
+  .a-out{background:#fdeeec;}
+  .a-hot{background:#e9effb;}
+  .alert-item b{font-weight:800;}
+  .alert-item .tag{font-size:11px; font-weight:800; white-space:nowrap; margin-top:1px;}
+
+  .bar{width:100%; height:7px; background:#eee; border-radius:99px; overflow:hidden;}
+  .bar i{display:block; height:100%; background:var(--ink); border-radius:99px;}
+  .bar i.low{background:var(--red);}
+
+  .toolbar{display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:12px;}
+  .toolbar input[type=text]{width:220px;}
+  .toolbar select{width:auto;}
+  .spacer{flex:1;}
+  .empty{color:var(--sub); text-align:center; padding:28px 0; font-size:13px;}
+  .foot{color:#b5b5b1; font-size:11px; text-align:center; margin-top:30px;}
+  .memo-cell{max-width:200px; white-space:pre-wrap; font-size:12px; color:#555;}
+  .scroll-x{overflow-x:auto;}
+  .stock-warn{color:var(--red); font-weight:700;}
+
+  dialog{border:none; border-radius:16px; padding:0; max-width:700px; width:92%; box-shadow:0 20px 60px rgba(0,0,0,.2);}
+  dialog::backdrop{background:rgba(0,0,0,.35);}
+  .dlg-body{padding:24px; max-height:80vh; overflow-y:auto;}
+  .dlg-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;}
+  .dlg-head h3{font-size:16px;}
+
+  /* ── 고객 작성 탭 ─────────────────────── */
+  #tab-cust .cwrap{padding:30px 28px 48px;}
+  #tab-cust h1{font-size:17px; font-weight:800; padding-bottom:14px; border-bottom:2px solid #111; margin-bottom:26px;}
+  .cf{margin-bottom:22px;}
+  .cf>label{display:block; font-size:13.5px; font-weight:700; margin-bottom:8px;}
+  .cf>label .req{color:var(--red);}
+  .cf input[type=text],.cf input[type=tel],.cf input[type=email],.cf input[type=date],.cf textarea{
+    background:#fff; border:1.5px solid #cfcfcb; border-radius:6px; padding:11px 12px; font-size:14px;
+  }
+  .cf .sub-gap{margin-top:8px;}
+  .opt-row{display:flex; align-items:center; gap:10px; padding:7px 2px; font-size:14px;}
+  .opt-row input[type=checkbox],.opt-row input[type=radio]{width:17px; height:17px; accent-color:#111;}
+  .opt-row .qty{width:74px; margin-left:auto; text-align:center; padding:6px 8px; border:1.5px solid #cfcfcb; border-radius:6px;}
+  .opt-row .free{flex:1; max-width:240px; border:1.5px solid #cfcfcb; border-radius:6px; padding:7px 10px;}
+  .privacy-box{border:1.5px solid #cfcfcb; border-radius:6px; padding:13px 14px; font-size:12px; color:#444; line-height:1.7; max-height:170px; overflow-y:auto; white-space:pre-wrap; background:#fff;}
+  .cust-submit{display:block; margin:34px auto 0; background:#111; color:#fff; border:none; padding:13px 44px; font-size:14px; font-weight:700; border-radius:4px; cursor:pointer;}
+  #custDone{display:none; text-align:center; padding:120px 20px;}
+  #custDone .big{font-size:26px; font-weight:800; margin-bottom:14px;}
+  #custDone p{color:#666; line-height:1.8;}
+
+  /* ── 주문서 인쇄 (LOWLIT 양식) ─────────── */
+  #printArea{display:none;}
+  @media print{
+    body *{visibility:hidden;}
+    #printArea, #printArea *{visibility:visible;}
+    #printArea{display:block; position:absolute; inset:0; background:#fff;}
+    @page{size:A4; margin:16mm;}
+  }
+  .ps{font-family:'Pretendard','Apple SD Gothic Neo',sans-serif; color:#111; font-size:12.5px;}
+  .ps .ps-co{font-size:23px; font-weight:800; letter-spacing:-.3px;}
+  .ps .ps-web{font-size:12px; color:#333; margin-top:5px;}
+  .ps .ps-meta{margin-top:34px;}
+  .ps .ps-meta div{display:flex; gap:18px; padding:2.5px 0;}
+  .ps .ps-meta b{width:78px; font-weight:700; flex-shrink:0;}
+  .ps .ps-cols{display:flex; justify-content:space-between; gap:40px; margin-top:38px;}
+  .ps .ps-cols>div{flex:1;}
+  .ps .ps-h{font-weight:800; margin-bottom:14px; font-size:13px;}
+  .ps .ps-cols p{line-height:1.8; color:#222;}
+  .ps .ps-sub{margin-top:26px;}
+  .ps table{width:100%; border-collapse:collapse; margin-top:36px;}
+  .ps thead th{border-top:2px solid #111; border-bottom:1.5px solid #111; padding:11px 8px; font-size:12.5px; font-weight:700; color:#111; text-align:left; background:none;}
+  .ps thead th.num{text-align:right;}
+  .ps tbody td{padding:16px 8px; border-bottom:1px solid #ddd; font-size:12.5px;}
+  .ps .ps-sums{width:46%; margin-left:auto; margin-top:0;}
+  .ps .ps-sums td{padding:11px 8px; border-bottom:1px solid #ddd;}
+  .ps .ps-sums tr:last-child td{font-weight:800; border-bottom:2.5px solid #111; font-size:13.5px;}
+  .ps .ps-notice{margin-top:46px; border-top:1px solid #ddd; padding-top:16px;}
+  .ps .ps-notice-h{font-size:11.5px; font-weight:800; margin-bottom:8px;}
+  .ps .ps-notice-b{font-size:10.5px; color:#444; line-height:1.75; white-space:pre-wrap;}
+  .ps .ps-notice-a{font-size:10.5px; color:#111; font-weight:700; margin-top:10px;}
+  .ps .ps-foot{margin-top:42px; text-align:center; font-size:11.5px; color:#333; line-height:1.8;}
+  .ps .ps-foot b{font-size:12.5px;}
+</style>
+</head>
+<body>
+
+<!-- ════════ 초기 설정 안내 (Firebase 미설정 시) ════════ -->
+<div id="setupView" style="display:none; max-width:720px; margin:60px auto; padding:0 20px;">
+  <div class="card">
+    <h2>🔧 최초 1회 설정이 필요합니다</h2>
+    <p style="font-size:13.5px; line-height:1.9; color:#444;">
+      이 플랫폼은 Firebase(구글 무료 서비스)로 로그인과 데이터 공유를 처리합니다.<br>
+      파일 안의 <b>firebaseConfig</b> 부분에 프로젝트 정보를 붙여넣어야 작동해요.<br><br>
+      <b>1.</b> console.firebase.google.com → 프로젝트 만들기<br>
+      <b>2.</b> Authentication → 시작하기 → Google 로그인 사용 설정<br>
+      <b>3.</b> Firestore Database → 데이터베이스 만들기 (프로덕션 모드) → 규칙에 도메인 제한 규칙 붙여넣기<br>
+      <b>4.</b> 프로젝트 설정(⚙️) → 일반 → 내 앱 → 웹 앱 추가 → <b>firebaseConfig</b> 값 복사<br>
+      <b>5.</b> 이 HTML 파일을 메모장으로 열어 <code>PASTE_YOUR_CONFIG</code> 부분을 복사한 값으로 교체 후 재업로드
+    </p>
+  </div>
+</div>
+
+<!-- ════════ 로그인 화면 ════════ -->
+<div id="loginView" style="display:none; text-align:center; padding:120px 20px;">
+  <div class="brand" style="font-size:18px; margin-bottom:6px;">lowlit collective</div>
+  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용</p>
+  <button class="btn btn-dark" style="padding:13px 28px;" onclick="login()">Google 계정으로 로그인</button>
+  <p id="loginErr" style="color:var(--red); font-size:12.5px; margin-top:16px;"></p>
+</div>
+
+<!-- ════════ 직원 화면 ════════ -->
+<div id="staffView" style="display:none;">
+<div class="wrap">
+
+  <header class="top">
+    <div class="brand">lowlit collective<small>전시 주문관리 플랫폼 · 직원용</small></div>
+    <div class="ev-bar">
+      <span style="font-size:12px;color:var(--sub);font-weight:600;">🎪 전시</span>
+      <select id="evSelect" onchange="switchEvent(this.value)"></select>
+      <button class="btn btn-line btn-sm" onclick="openEventDlg()">＋ 새 전시</button>
+      <span id="userEmail" style="font-size:11.5px; color:var(--sub);"></span>
+      <button class="btn btn-ghost btn-sm" onclick="logout()">로그아웃</button>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button data-tab="home" class="on" onclick="showTab('home')">🏠 홈</button>
+    <button data-tab="cust" onclick="showTab('cust')">🧾 주문서 작성</button>
+    <button data-tab="list" onclick="showTab('list')">📦 주문목록</button>
+    <button data-tab="stock" onclick="showTab('stock')">🗃️ 재고현황</button>
+    <button data-tab="prod" onclick="showTab('prod')">📋 제품관리</button>
+    <button data-tab="set" onclick="showTab('set')">⚙️ 설정</button>
+  </nav>
+
+  <!-- ── 홈 ── -->
+  <section id="tab-home">
+    <div class="stat-grid">
+      <div class="stat"><div class="k">📋 누적 주문</div><div class="v" id="stOrders">0건</div><div class="s" id="stOrdersToday"></div></div>
+      <div class="stat"><div class="k">💰 누적 매출</div><div class="v" id="stSales">0원</div><div class="s" id="stSalesToday"></div></div>
+      <div class="stat"><div class="k">🚚 발송 대기</div><div class="v" id="stShip">0건</div></div>
+      <div class="stat"><div class="k">🗃️ 전체 소진율</div><div class="v" id="stBurn">0%</div><div class="s" id="stBurnSub"></div></div>
+    </div>
+
+    <div class="grid2">
+      <div class="card">
+        <h2>📣 오늘의 판매 포커스 <span class="hint">재고 기준 자동 분석 · 매일 갱신</span></h2>
+        <div id="focusBox"></div>
+      </div>
+      <div class="card">
+        <h2>🔥 판매 TOP & 전시 비교</h2>
+        <div id="hotBox"></div>
+        <div style="border-top:1px solid var(--line); margin:12px 0;"></div>
+        <div class="scroll-x"><table>
+          <thead><tr><th>전시</th><th class="num">주문</th><th class="num">매출</th><th class="num">발송대기</th></tr></thead>
+          <tbody id="evCompareRows"></tbody>
+        </table></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 주문목록 ── -->
+  <section id="tab-list" style="display:none;">
+    <div class="card">
+      <h2>📦 주문 목록 <span class="hint" id="listEvName"></span></h2>
+      <div class="toolbar">
+        <input type="text" id="q" placeholder="🔍 이름·연락처·주문번호 검색" oninput="renderOrders()">
+        <select id="fPay" onchange="renderOrders()">
+          <option value="">결제: 전체</option><option>카드</option><option>현금</option><option>입금 대기</option><option>기타</option>
+        </select>
+        <select id="fShip" onchange="renderOrders()">
+          <option value="">상태: 전체</option><option>상품준비</option><option>발송완료</option>
+        </select>
+        <div class="spacer"></div>
+        <button class="btn btn-line btn-sm" onclick="exportXlsx()">📤 엑셀 내보내기</button>
+      </div>
+      <div class="scroll-x">
+      <table>
+        <thead><tr>
+          <th>주문번호</th><th>일시</th><th>구매자</th><th>품목</th><th class="num">금액</th><th>결제</th><th>상태</th><th>메모</th><th></th>
+        </tr></thead>
+        <tbody id="orderRows"></tbody>
+      </table>
+      </div>
+      <div class="empty" id="orderEmpty" style="display:none;">아직 접수된 주문이 없습니다.</div>
+    </div>
+  </section>
+
+  <!-- ── 재고현황 ── -->
+  <section id="tab-stock" style="display:none;">
+    <div class="card">
+      <h2>🗃️ 재고 현황 <span class="hint">잔여 = 준비수량 − 주문수량 · 잔여 20% 이하 경고</span></h2>
+      <div class="scroll-x">
+      <table>
+        <thead><tr>
+          <th>제품명</th><th>옵션</th><th class="num">판매가</th><th class="num">준비수량</th><th class="num">주문</th><th class="num">잔여</th><th style="width:180px;">소진율</th>
+        </tr></thead>
+        <tbody id="stockRows"></tbody>
+      </table>
+      </div>
+      <div class="empty" id="stockEmpty" style="display:none;">등록된 제품이 없습니다.</div>
+    </div>
+  </section>
+
+  <!-- ── 제품관리 ── -->
+  <section id="tab-prod" style="display:none;">
+    <div class="grid2">
+      <div class="card">
+        <h2>＋ 제품 직접 등록</h2>
+        <div class="row">
+          <div style="flex:2;"><label class="f">제품명 *</label><input type="text" id="pName" placeholder="예: A. 퓨어화이트"></div>
+          <div><label class="f">옵션</label><input type="text" id="pOpt" placeholder="색상/사이즈 등"></div>
+        </div>
+        <div class="row">
+          <div><label class="f">판매가 (원) *</label><input type="number" id="pPrice" min="0"></div>
+          <div><label class="f">배송비 (개당·원)</label><input type="number" id="pShip" min="0" placeholder="0"></div>
+          <div><label class="f">준비수량 *</label><input type="number" id="pStock" min="0"></div>
+        </div>
+        <button class="btn btn-dark btn-sm" onclick="addProduct()">제품 추가</button>
+      </div>
+
+      <div class="card">
+        <h2>📥 일괄 등록</h2>
+        <label class="f">엑셀/CSV 업로드 (열: 제품명, 옵션, 판매가, 준비수량, 배송비)</label>
+        <input type="file" id="pFile" accept=".xlsx,.xls,.csv" style="margin-bottom:10px;">
+        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px;">
+          <button class="btn btn-dark btn-sm" onclick="importProducts()">업로드 등록</button>
+          <button class="btn btn-line btn-sm" onclick="downloadTemplate()">서식 다운로드</button>
+        </div>
+        <label class="f">다른 전시에서 제품 불러오기</label>
+        <div style="display:flex; gap:8px;">
+          <select id="copyFrom" style="flex:1;"></select>
+          <button class="btn btn-line btn-sm" onclick="copyProducts()">불러오기</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>📋 등록된 제품 <span class="hint" id="prodEvName"></span></h2>
+      <div class="scroll-x">
+      <table>
+        <thead><tr><th>제품명</th><th>옵션</th><th class="num">판매가</th><th class="num">배송비</th><th class="num">준비수량</th><th>고객화면 노출</th><th></th></tr></thead>
+        <tbody id="prodRows"></tbody>
+      </table>
+      </div>
+      <div class="empty" id="prodEmpty" style="display:none;">등록된 제품이 없습니다.</div>
+    </div>
+
+    <div class="card">
+      <h2>🎁 이벤트 할인 <span class="hint">이 전시의 주문에 자동 적용 · 전시마다 따로 등록</span></h2>
+      <div class="row">
+        <div style="flex:1.5;"><label class="f">이벤트명 *</label><input type="text" id="prName" placeholder="예: 3+1 이벤트"></div>
+        <div style="flex:1.5;"><label class="f">유형</label>
+          <select id="prType" onchange="prTypeUI()">
+            <option value="nm">N개 구매 시 M개 무료 (3+1 등)</option>
+            <option value="amt">N개 이상 구매 시 정액 할인</option>
+            <option value="pct">N개 이상 구매 시 % 할인</option>
+          </select>
+        </div>
+      </div>
+      <div class="row">
+        <div><label class="f">N (기준 수량)</label><input type="number" id="prN" min="1" value="3"></div>
+        <div id="prMWrap"><label class="f">M (무료 수량)</label><input type="number" id="prM" min="1" value="1"></div>
+        <div id="prXWrap" style="display:none;"><label class="f" id="prXLabel">할인액 (원)</label><input type="number" id="prX" min="0"></div>
+        <div style="flex:1.5;"><label class="f">대상 제품</label><select id="prPid"><option value="">전체 제품 합산</option></select></div>
+      </div>
+      <button class="btn btn-dark btn-sm" onclick="addPromo()">이벤트 추가</button>
+      <p style="font-size:11.5px;color:var(--sub);margin-top:8px;">N+M 무료는 묶음마다 반복 적용되고, 무료 품목은 저렴한 것부터 적용됩니다. 정액/% 할인은 주문당 1회 적용.</p>
+      <div class="scroll-x" style="margin-top:12px;">
+      <table>
+        <thead><tr><th>이벤트명</th><th>내용</th><th>대상</th><th>적용가</th><th>상태</th><th></th></tr></thead>
+        <tbody id="promoRows"></tbody>
+      </table>
+      </div>
+      <div class="empty" id="promoEmpty" style="display:none;">등록된 이벤트가 없습니다.</div>
+    </div>
+  </section>
+
+  <!-- ── 설정 ── -->
+  <section id="tab-set" style="display:none;">
+    <div class="grid2">
+      <div class="card">
+        <h2>🏢 회사 정보 <span class="hint">주문서 인쇄에 사용</span></h2>
+        <div class="row"><div><label class="f">상호 (주문서 상단·하단)</label><input type="text" id="coName" onchange="saveSettings()"></div></div>
+        <div class="row">
+          <div><label class="f">웹사이트</label><input type="text" id="coWeb" onchange="saveSettings()"></div>
+        </div>
+        <div class="row">
+          <div><label class="f">주소</label><input type="text" id="coAddr" onchange="saveSettings()"></div>
+        </div>
+        <div class="row">
+          <div><label class="f">이메일</label><input type="text" id="coEmail" onchange="saveSettings()"></div>
+        </div>
+        <div class="row"><div><label class="f">배송관련 안내 (주문서 메타 영역)</label><input type="text" id="shipNote" onchange="saveSettings()" placeholder="예: 전시 종료 후 영업일 5~7일 내 순차 발송"></div></div>
+        <button class="btn btn-dark btn-sm" onclick="saveSettings();alert('설정이 저장되었습니다 ✅')">💾 설정 저장</button>
+      </div>
+
+      <div class="card">
+        <h2>🔒 개인정보 수집·이용 동의문 <span class="hint">주문서 작성 화면에 표시</span></h2>
+        <textarea id="privacyText" style="min-height:180px; font-size:12px;" onchange="saveSettings()"></textarea>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>🧾 제품 특성·교환/반품 안내문 <span class="hint">주문서 하단 인쇄 + 주문서 작성 화면에서 확인 동의를 받습니다</span></h2>
+      <textarea id="prodNotice" style="min-height:160px; font-size:12px;" onchange="saveSettings()"></textarea>
+    </div>
+
+    <div class="grid2">
+      <div class="card">
+        <h2>🎪 전시 관리</h2>
+        <div class="scroll-x"><table>
+          <thead><tr><th>전시명</th><th class="num">주문</th><th class="num">제품</th><th></th></tr></thead>
+          <tbody id="evRows"></tbody>
+        </table></div>
+      </div>
+      <div class="card">
+        <h2>💾 데이터 백업 <span class="hint">이 브라우저에만 저장됩니다</span></h2>
+        <p style="font-size:12.5px; color:#666; margin-bottom:12px;">전시 전·후로 백업해 두세요. 다른 기기 이동 시 백업 파일을 불러오면 됩니다.</p>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn btn-line btn-sm" onclick="backupJson()">백업 내려받기 (.json)</button>
+          <input type="file" id="restoreFile" accept=".json" style="display:none;" onchange="restoreJson(this)">
+          <button class="btn btn-line btn-sm" onclick="document.getElementById('restoreFile').click()">백업 불러오기</button>
+          <button class="btn btn-red btn-sm" onclick="wipeAll()">전체 데이터 삭제</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 고객 작성 탭 ── -->
+  <section id="tab-cust" style="display:none;">
+  <div class="card cwrap" style="max-width:700px; margin:0 auto;">
+    <div id="custForm">
+      <h1 id="custTitle">전시명 - 구매자 정보 기입</h1>
+
+      <div class="cf"><label>이름 <span class="req">*</span></label><input type="text" id="kName" autocomplete="off"></div>
+      <div class="cf"><label>연락처 <span class="req">*</span></label><input type="tel" id="kPhone" placeholder="010-0000-0000" autocomplete="off"></div>
+      <div class="cf"><label>이메일</label><input type="email" id="kEmail" placeholder="주문 안내 수신용 (선택)" autocomplete="off"></div>
+      <div class="cf"><label>주소 <span class="req">*</span></label>
+        <div style="display:flex; gap:8px;">
+          <input type="text" id="kZip" placeholder="우편번호" readonly style="width:110px; background:#f5f5f3;">
+          <button type="button" class="btn btn-dark btn-sm" style="white-space:nowrap; padding:9px 16px;" onclick="openPostcode()">🔍 주소 찾기</button>
+        </div>
+        <div id="kPostLayer" style="display:none; height:440px; border:1.5px solid #cfcfcb; border-radius:6px; margin-top:8px; position:relative; overflow:hidden;">
+          <button type="button" onclick="closePostcode()" style="position:absolute; top:4px; right:6px; z-index:10; border:none; background:#111; color:#fff; border-radius:4px; padding:3px 9px; font-size:12px; cursor:pointer;">닫기 ✕</button>
+        </div>
+        <input type="text" id="kAddr" class="sub-gap" placeholder="주소 (주소 찾기로 입력하거나 직접 입력)" autocomplete="off">
+        <input type="text" id="kAddr2" class="sub-gap" placeholder="상세주소 (동·호수 등)" autocomplete="off">
+      </div>
+      <div class="cf"><label>희망 배송일</label><input type="date" id="kHopeDate"></div>
+      <div class="cf"><label>배송 메모</label><input type="text" id="kShipMemo" placeholder="택배기사님께 전달할 메시지 (예: 부재 시 문 앞에 놓아주세요)" autocomplete="off"></div>
+
+      <div class="cf"><label>구매품 <span class="req">*</span></label>
+        <div id="kPromoBanner"></div>
+        <div id="kProducts"></div>
+        <div class="opt-row">
+          <input type="checkbox" id="kEtcChk">
+          <span>기타:</span>
+          <input type="text" id="kEtc" class="free" placeholder="직접입력 (예: A3, D2, F1)">
+        </div>
+        <div id="kGifts"></div>
+      </div>
+
+      <div class="cf"><label>결제수단 <span class="req">*</span></label>
+        <div class="opt-row"><input type="radio" name="kPay" value="카드" id="kp1"><label for="kp1" style="font-weight:400;">카드</label></div>
+        <div class="opt-row"><input type="radio" name="kPay" value="현금" id="kp2"><label for="kp2" style="font-weight:400;">현금(현금영수증 확인필요)</label></div>
+        <div class="opt-row"><input type="radio" name="kPay" value="기타" id="kp3"><label for="kp3" style="font-weight:400;">기타:</label>
+          <input type="text" id="kPayEtc" class="free" placeholder="직접입력"></div>
+      </div>
+
+      <div class="cf"><label>담당자 메모 <span style="font-weight:400;color:var(--sub);font-size:12px;">(발송 예정일 꼭 안내해주세요!)</span></label>
+        <textarea id="kStaffMemo" style="min-height:80px;"></textarea>
+      </div>
+
+      <div class="cf"><label>현장 할인 금액 <span style="font-weight:400;color:var(--sub);font-size:12px;">(담당자 기입 · 원 단위, 없으면 비워두세요)</span></label>
+        <input type="number" id="kDiscount" min="0" placeholder="0" style="max-width:200px;" oninput="updateCustSummary()">
+      </div>
+
+      <div class="cf"><label>제품 특성 안내 <span class="req">*</span></label>
+        <div class="privacy-box" id="kNoticeBox"></div>
+        <div class="opt-row" style="margin-top:8px;">
+          <input type="checkbox" id="kNoticeChk"><label for="kNoticeChk" style="font-weight:400;">위 제품 특성 안내를 확인하였으며, 해당 사항이 교환·반품 사유가 되지 않음에 동의합니다.</label>
+        </div>
+      </div>
+
+      <div class="cf"><label>개인정보 수집 및 이용 동의 <span class="req">*</span></label>
+        <div class="privacy-box" id="kPrivacyBox"></div>
+        <div class="opt-row" style="margin-top:8px;">
+          <input type="checkbox" id="kConsent"><label for="kConsent" style="font-weight:400;">개인정보 수집 및 이용에 동의합니다.</label>
+        </div>
+      </div>
+
+      <div id="kSummary" style="border:1.5px solid #111; border-radius:6px; padding:14px 16px; font-size:13.5px; line-height:2; margin-top:6px;"></div>
+
+      <button class="cust-submit" onclick="submitCustOrder()">보내기</button>
+    </div>
+
+    <div id="custDone">
+      <div class="big">주문이 접수되었습니다 ✅</div>
+      <p>작성해 주셔서 감사합니다.<br>제품은 전시 종료 후 입력해 주신 주소로 발송됩니다.</p>
+    </div>
+  </div>
+  </section>
+
+  <div class="foot">LOWLIT 전시 주문관리 v2.0 · 단일 파일 · 브라우저 저장</div>
+</div>
+</div>
+
+<!-- ── 주문 상세 다이얼로그 ── -->
+<dialog id="dlg">
+  <div class="dlg-body">
+    <div class="dlg-head"><h3 id="dlgTitle">주문 상세</h3><button class="btn btn-ghost btn-sm" onclick="dlg.close()">닫기</button></div>
+    <div id="dlgContent"></div>
+  </div>
+</dialog>
+
+<!-- ── 새 전시 다이얼로그 ── -->
+<dialog id="evDlg">
+  <div class="dlg-body">
+    <div class="dlg-head"><h3>＋ 새 전시 추가</h3><button class="btn btn-ghost btn-sm" onclick="evDlg.close()">닫기</button></div>
+    <div class="row"><div><label class="f">전시명 *</label><input type="text" id="newEvName" placeholder="예: 서울디자인페스티벌 2026"></div></div>
+    <div class="row"><div><label class="f">제품 구성 가져오기 (선택)</label><select id="newEvCopy"></select></div></div>
+    <p style="font-size:12px; color:var(--sub); margin-bottom:14px;">제품을 가져오면 품목·가격이 복사됩니다. 준비수량은 새로 입력하세요.</p>
+    <button class="btn btn-dark" onclick="createEvent()">전시 만들기</button>
+  </div>
+</dialog>
+
+<!-- ── 주문서 인쇄 영역 ── -->
+<div id="printArea"></div>
+
+<script>
+const fmt=n=>Number(n||0).toLocaleString('ko-KR');
+const $=id=>document.getElementById(id);
+const pad2=n=>String(n).padStart(2,'0');
+function nowLocal(){ const d=new Date(); return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`; }
+const today=()=>nowLocal().slice(0,10);
+const paid=o=>o.total-(o.promoDiscount||0)-(o.discount||0)+(o.shipFee||0);
+
+const DEFAULT_PRIVACY=`회사명(이하 '회사'라 한다)는 개인정보 보호법 제30조에 따라 정보 주체의 개인정보를 보호하고 이와 관련한 고충을 신속하고 원활하게 처리할 수 있도록 하기 위하여 다음과 같이 개인정보 처리지침을 수립, 공개합니다.
+
+제1조 (개인정보의 처리목적)
+회사는 다음의 목적을 위하여 개인정보를 처리합니다. 처리하고 있는 개인정보는 다음의 목적 이외의 용도로는 이용되지 않으며, 이용 목적이 변경되는 경우에는 개인정보보호법 제18조에 따라 별도의 동의를 받는 등 필요한 조치를 이행할 예정입니다.
+· 수집항목: 이름, 연락처, 이메일, 배송주소
+· 이용목적: 주문 제품의 발송 및 배송 관련 안내
+· 보유기간: 발송 완료 후 1년 (관계 법령에 따라 보존이 필요한 경우 해당 기간)`;
+
+const DEFAULT_NOTICE=`로우리트의 제품은 100% 재활용 플라스틱으로 로우리트의 독자적인 기술을 사용하여 만들어집니다.
+재생 소재 고유의 특성으로 인해 발생하는 아래 사항은 교환이나 반품의 사유가 되지 않으므로 신중한 구매를 부탁드립니다.
+
+1. 고유한 패턴과 색상: 생산 차수 및 수집된 플라스틱 조각의 비율에 따라 제품마다 마블링 패턴이 모두 다르게 발현됩니다.
+2. 표면의 자연스러운 흔적: 성형 과정에서 표면에 미세한 기포, 작은 점, 혹은 미세한 스크래치나 결이 발생할 수 있습니다.
+3. 색상 오차: 모니터의 해상도나 주변 환경(실내 조명, 자연광 등)에 따라 사진과 실제 제품의 색상이 다소 다르게 보일 수 있습니다.`;
+
+/* ════════ Firebase 설정 (최초 1회) ════════
+   1) console.firebase.google.com → 프로젝트 만들기
+   2) Authentication → Google 로그인 사용 설정
+   3) Firestore Database 만들기 → 규칙 탭에 아래 붙여넣기:
+
+   rules_version = '2';
+   service cloud.firestore {
+     match /databases/{database}/documents {
+       match /{document=**} {
+         allow read, write: if request.auth != null
+           && request.auth.token.email.matches('.*@lowlit[.]co$');
+       }
+     }
+   }
+
+   4) 프로젝트 설정(⚙️) → 내 앱 → 웹(</>) 추가 → firebaseConfig 복사
+   5) 아래 객체를 복사한 값으로 교체
+*/
+const firebaseConfig={
+  apiKey:"AIzaSyC4G1Xzu34w2sdb-iy0pMuqMiKw60k_Stk",
+  authDomain:"your-project.firebaseapp.com",
+  projectId:"your-project",
+  storageBucket:"your-project.appspot.com",
+  messagingSenderId:"000000000000",
+  appId:"1:000000000000:web:xxxxxxxxxxxx"
+};
+const ALLOWED_DOMAIN='lowlit.co';
+
+const DEFAULT_SETTINGS={
+  coName:'LOWLIT COLLECTIVE : 로우리트콜렉티브',
+  coWeb:'lowlit.co',
+  coAddr:'서울 동작구 상도로55길 6 (상도동) 404-1',
+  coEmail:'contact@lowlit.co',
+  shipNote:'',
+  privacyText:DEFAULT_PRIVACY,
+  prodNotice:DEFAULT_NOTICE
+};
+let db={events:[], currentEventId:null, orders:[], settings:Object.assign({},DEFAULT_SETTINGS)};
+let fs=null, auth=null, configReady=false, started=false;
+
+function save(){ // 전시·제품·이벤트·설정 공유 저장 (모든 기기에 실시간 반영)
+  if(!fs) return;
+  fs.collection('app').doc('config').set({events:JSON.parse(JSON.stringify(db.events)), settings:db.settings})
+    .catch(e=>alert('저장 실패: '+e.message));
+}
+function saveOrderDoc(o){ if(fs) fs.collection('orders').doc(o.id).set(JSON.parse(JSON.stringify(o))).catch(e=>alert('주문 저장 실패: '+e.message)); }
+function deleteOrderDoc(id){ if(fs) fs.collection('orders').doc(id).delete().catch(e=>alert('삭제 실패: '+e.message)); }
+
+function boot(){
+  if(!firebaseConfig.projectId||String(firebaseConfig.apiKey).includes('PASTE')){
+    $('setupView').style.display='block'; return;
+  }
+  firebase.initializeApp(firebaseConfig);
+  auth=firebase.auth(); fs=firebase.firestore();
+  try{ fs.enablePersistence({synchronizeTabs:true}).catch(()=>{}); }catch(e){}
+  auth.onAuthStateChanged(u=>{
+    if(u&&u.email&&u.email.toLowerCase().endsWith('@'+ALLOWED_DOMAIN)){ startApp(u); }
+    else{
+      if(u){ auth.signOut(); $('loginErr').textContent='@'+ALLOWED_DOMAIN+' 계정만 접근할 수 있습니다.'; }
+      $('staffView').style.display='none'; $('loginView').style.display='block';
+    }
+  });
+}
+function login(){
+  const p=new firebase.auth.GoogleAuthProvider();
+  p.setCustomParameters({hd:ALLOWED_DOMAIN});
+  auth.signInWithPopup(p).catch(e=>{ $('loginErr').textContent='로그인 실패: '+e.message; });
+}
+function logout(){ auth.signOut(); }
+function startApp(u){
+  $('loginView').style.display='none'; $('setupView').style.display='none';
+  $('staffView').style.display='';
+  $('userEmail').textContent=u.email;
+  if(started) return; started=true;
+  fs.collection('app').doc('config').onSnapshot(d=>{
+    if(d.exists){ const c=d.data(); db.events=c.events||[]; db.settings=Object.assign({},DEFAULT_SETTINGS,c.settings||{}); }
+    if(!db.events.length){ db.events=[{id:'e'+Date.now(), name:'새 전시', products:[]}]; save(); return; }
+    const savedEv=localStorage.getItem('lowlit_current_event');
+    if(!db.currentEventId) db.currentEventId=db.events.find(e=>e.id===savedEv)?savedEv:db.events[0].id;
+    if(!db.events.find(e=>e.id===db.currentEventId)) db.currentEventId=db.events[0].id;
+    configReady=true; initSettings(); renderAll();
+  },e=>alert('데이터 연결 오류: '+e.message));
+  fs.collection('orders').onSnapshot(snap=>{
+    db.orders=snap.docs.map(d=>d.data()).sort((a,b)=>(b.ts||'').localeCompare(a.ts||''));
+    if(configReady) renderAll();
+  },e=>alert('주문 데이터 오류: '+e.message));
+}
+
+function ev(){ return db.events.find(e=>e.id===db.currentEventId)||db.events[0]; }
+function evOrders(id){ return db.orders.filter(o=>o.eventId===(id||db.currentEventId)); }
+
+function saveSettings(){
+  const s=db.settings;
+  s.coName=$('coName').value; s.coWeb=$('coWeb').value; s.coAddr=$('coAddr').value;
+  s.coEmail=$('coEmail').value;
+  s.shipNote=$('shipNote').value; s.privacyText=$('privacyText').value; s.prodNotice=$('prodNotice').value;
+  save();
+}
+
+/* ── 전시 ── */
+function renderEvSelect(){
+  $('evSelect').innerHTML=db.events.map(e=>`<option value="${e.id}" ${e.id===db.currentEventId?'selected':''}>${esc(e.name)}</option>`).join('');
+  const copyOpts='<option value="">선택 안 함</option>'+db.events.filter(e=>e.id!==db.currentEventId).map(e=>`<option value="${e.id}">${esc(e.name)}</option>`).join('');
+  $('copyFrom').innerHTML=db.events.filter(e=>e.id!==db.currentEventId).map(e=>`<option value="${e.id}">${esc(e.name)}</option>`).join('')||'<option value="">다른 전시 없음</option>';
+  $('newEvCopy').innerHTML=copyOpts;
+}
+function switchEvent(id){ db.currentEventId=id; localStorage.setItem('lowlit_current_event',id); renderAll(); }
+function openEventDlg(){ $('newEvName').value=''; renderEvSelect(); evDlg.showModal(); }
+function createEvent(){
+  const name=$('newEvName').value.trim();
+  if(!name){ alert('전시명을 입력해 주세요.'); return; }
+  const e={id:'e'+Date.now(), name, products:[]};
+  const src=db.events.find(x=>x.id===$('newEvCopy').value);
+  if(src) e.products=src.products.map(p=>({...p, id:'p'+Date.now()+Math.random().toString(36).slice(2,6), stock:0}));
+  db.events.push(e); db.currentEventId=e.id;
+  localStorage.setItem('lowlit_current_event',e.id);
+  save();
+  evDlg.close(); renderAll();
+}
+function delEvent(id){
+  if(db.events.length<=1){ alert('전시는 최소 1개가 필요합니다.'); return; }
+  const e=db.events.find(x=>x.id===id);
+  const n=evOrders(id).length;
+  if(!confirm(`'${e.name}' 전시를 삭제할까요?${n?`\n주문 ${n}건도 함께 삭제됩니다.`:''}`)) return;
+  db.events=db.events.filter(x=>x.id!==id);
+  db.orders.filter(o=>o.eventId===id).forEach(o=>deleteOrderDoc(o.id));
+  db.orders=db.orders.filter(o=>o.eventId!==id);
+  if(db.currentEventId===id){ db.currentEventId=db.events[0].id; localStorage.setItem('lowlit_current_event',db.currentEventId); }
+  save(); renderAll();
+}
+function renameEvent(id){
+  const e=db.events.find(x=>x.id===id);
+  const name=prompt('전시명 변경', e.name);
+  if(name&&name.trim()){ e.name=name.trim(); save(); renderAll(); }
+}
+
+/* ── 탭 ── */
+function showTab(t){
+  ['home','cust','list','stock','prod','set'].forEach(k=>{
+    $('tab-'+k).style.display=k===t?'':'none';
+    document.querySelector(`nav.tabs button[data-tab="${k}"]`).classList.toggle('on',k===t);
+  });
+  if(t==='cust') prepCustTab();
+  else renderAll(false);
+}
+
+/* ── 재고 계산 ── */
+function orderedQty(pid){
+  return evOrders().reduce((s,o)=>s+o.items.filter(i=>i.pid===pid).reduce((a,i)=>a+i.qty,0),0);
+}
+function remain(p){ return p.stock-orderedQty(p.id); }
+
+/* ── 제품 ── */
+function addProduct(){
+  const name=$('pName').value.trim(), opt=$('pOpt').value.trim();
+  const price=+$('pPrice').value, stock=+$('pStock').value, ship=Math.max(0,+$('pShip').value||0);
+  if(!name||isNaN(price)||price<0||isNaN(stock)||stock<0){ alert('제품명, 판매가, 준비수량을 확인해 주세요.'); return; }
+  upsertProduct(name,opt,price,stock,ship);
+  ['pName','pOpt','pPrice','pStock','pShip'].forEach(i=>$(i).value='');
+  save(); renderAll(false);
+}
+function upsertProduct(name,opt,price,stock,ship=0){
+  const ex=ev().products.find(p=>p.name===name&&p.option===opt);
+  if(ex){ ex.price=price; ex.stock=stock; ex.ship=ship; }
+  else ev().products.push({id:'p'+Date.now()+Math.random().toString(36).slice(2,6), name, option:opt, price, stock, ship, visible:true});
+}
+function delProduct(id){
+  if(orderedQty(id)>0 && !confirm('이미 주문이 있는 제품입니다. 삭제할까요?')) return;
+  if(orderedQty(id)===0 && !confirm('제품을 삭제할까요?')) return;
+  ev().products=ev().products.filter(p=>p.id!==id); save(); renderAll(false);
+}
+function editStock(id,v){ const p=ev().products.find(p=>p.id===id); if(p){ p.stock=Math.max(0,+v||0); save(); renderHome(); } }
+function editShip(id,v){ const p=ev().products.find(p=>p.id===id); if(p){ p.ship=Math.max(0,+v||0); save(); } }
+function toggleVisible(id){ const p=ev().products.find(p=>p.id===id); p.visible=p.visible===false?true:false; save(); renderProducts(); }
+function renderProducts(){
+  $('prodEvName').textContent='· '+ev().name;
+  const tb=$('prodRows'); tb.innerHTML='';
+  $('prodEmpty').style.display=ev().products.length?'none':'';
+  ev().products.forEach(p=>{
+    tb.insertAdjacentHTML('beforeend',`<tr>
+      <td><b>${esc(p.name)}</b></td><td>${esc(p.option)||'-'}</td>
+      <td class="num">${fmt(p.price)}원</td>
+      <td class="num"><input type="number" value="${p.ship||0}" min="0" style="width:80px;text-align:right;" onchange="editShip('${p.id}',this.value)"></td>
+      <td class="num"><input type="number" value="${p.stock}" min="0" style="width:80px;text-align:right;" onchange="editStock('${p.id}',this.value)"></td>
+      <td><span class="pill ${p.visible===false?'p-gray':'p-green'}" style="cursor:pointer;" onclick="toggleVisible('${p.id}')">${p.visible===false?'숨김':'노출'}</span></td>
+      <td><button class="btn btn-red btn-sm" onclick="delProduct('${p.id}')">삭제</button></td></tr>`);
+  });
+}
+function copyProducts(){
+  const src=db.events.find(e=>e.id===$('copyFrom').value);
+  if(!src){ alert('불러올 전시가 없습니다.'); return; }
+  src.products.forEach(p=>{ if(!ev().products.find(x=>x.name===p.name&&x.option===p.option)) ev().products.push({...p, id:'p'+Date.now()+Math.random().toString(36).slice(2,6), stock:0}); });
+  save(); renderAll(false);
+  alert(`'${src.name}' 제품 구성을 가져왔습니다. 준비수량을 입력해 주세요.`);
+}
+function importProducts(){
+  const f=$('pFile').files[0];
+  if(!f){ alert('파일을 선택해 주세요.'); return; }
+  const r=new FileReader();
+  r.onload=e=>{
+    try{
+      const wb=XLSX.read(e.target.result,{type:'array'});
+      const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1});
+      let n=0;
+      rows.slice(1).forEach(row=>{
+        const [name,opt,price,stock,ship]=row;
+        if(!name) return;
+        upsertProduct(String(name).trim(), String(opt||'').trim(), +price||0, +stock||0, +ship||0); n++;
+      });
+      save(); renderAll(false);
+      alert(n+'개 품목을 등록했습니다.');
+      $('pFile').value='';
+    }catch(err){ alert('파일을 읽을 수 없습니다: '+err.message); }
+  };
+  r.readAsArrayBuffer(f);
+}
+function downloadTemplate(){
+  const ws=XLSX.utils.aoa_to_sheet([['제품명','옵션','판매가','준비수량','배송비'],['예시) A. 퓨어화이트','',39000,30,3000]]);
+  const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'제품');
+  XLSX.writeFile(wb,'제품등록_서식.xlsx');
+}
+
+/* ── 이벤트 할인 (프로모션) ── */
+function promos(){ ev().promos=ev().promos||[]; return ev().promos; }
+function prTypeUI(){
+  const t=$('prType').value;
+  $('prMWrap').style.display=t==='nm'?'':'none';
+  $('prXWrap').style.display=t==='nm'?'none':'';
+  $('prXLabel').textContent=t==='pct'?'할인율 (%)':'할인액 (원)';
+}
+function addPromo(){
+  const name=$('prName').value.trim(), type=$('prType').value;
+  const n=Math.max(1,+$('prN').value||0), m=Math.max(1,+$('prM').value||0), x=Math.max(0,+$('prX').value||0);
+  if(!name){ alert('이벤트명을 입력해 주세요.'); return; }
+  if(type!=='nm'&&!x){ alert('할인값을 입력해 주세요.'); return; }
+  if(type==='pct'&&x>100){ alert('할인율은 100% 이하로 입력해 주세요.'); return; }
+  promos().push({id:'pr'+Date.now(), name, type, n, m, x, pid:$('prPid').value, active:true});
+  $('prName').value=''; $('prX').value='';
+  save(); renderPromos(); renderHome();
+}
+function delPromo(id){ if(!confirm('이벤트를 삭제할까요?')) return; ev().promos=promos().filter(p=>p.id!==id); save(); renderPromos(); renderHome(); }
+function togglePromo(id){ const p=promos().find(x=>x.id===id); p.active=!p.active; save(); renderPromos(); renderHome(); }
+function promoTarget(p){
+  if(!p.pid) return '전체 제품';
+  const pr=ev().products.find(x=>x.id===p.pid);
+  return pr?pr.name+(pr.option?' · '+pr.option:''):'(삭제된 제품)';
+}
+function promoDesc(p){
+  if(p.type==='nm') return `${p.n}개 구매 시 ${p.m}개 증정 (증정품 선택)`;
+  if(p.type==='amt') return `${p.n}개 이상 구매 시 ${fmt(p.x)}원 할인`;
+  return `${p.n}개 이상 구매 시 ${p.x}% 할인`;
+}
+function promoPrice(p){
+  if(!p.pid) return '';
+  const pr=ev().products.find(x=>x.id===p.pid);
+  if(!pr) return '';
+  if(p.type==='nm') return `${p.n+p.m}개를 ${fmt(pr.price*p.n)}원에 (개당 ${fmt(Math.round(pr.price*p.n/(p.n+p.m)))}원)`;
+  if(p.type==='amt') return `${p.n}개 기준 ${fmt(pr.price*p.n-p.x)}원`;
+  return `${p.n}개 기준 ${fmt(Math.round(pr.price*p.n*(100-p.x)/100))}원`;
+}
+function renderPromos(){
+  $('prPid').innerHTML='<option value="">전체 제품 합산</option>'+ev().products.map(p=>`<option value="${p.id}">${esc(p.name)}${p.option?' · '+esc(p.option):''}</option>`).join('');
+  const tb=$('promoRows'); tb.innerHTML='';
+  $('promoEmpty').style.display=promos().length?'none':'';
+  promos().forEach(p=>{
+    tb.insertAdjacentHTML('beforeend',`<tr>
+      <td><b>${esc(p.name)}</b></td><td>${promoDesc(p)}</td><td>${esc(promoTarget(p))}</td>
+      <td style="font-size:12px;">${promoPrice(p)||'-'}</td>
+      <td><span class="pill ${p.active?'p-green':'p-gray'}" style="cursor:pointer;" onclick="togglePromo('${p.id}')">${p.active?'적용 중':'중지'}</span></td>
+      <td><button class="btn btn-red btn-sm" onclick="delPromo('${p.id}')">삭제</button></td></tr>`);
+  });
+}
+function computePromo(items){
+  let disc=0; const names=[]; const gifts=[];
+  promos().filter(p=>p.active).forEach(p=>{
+    const scope=p.pid?items.filter(i=>i.pid===p.pid):items;
+    const qty=scope.reduce((s,i)=>s+i.qty,0);
+    if(!qty) return;
+    if(p.type==='nm'){
+      const cnt=Math.floor(qty/p.n)*p.m;
+      if(cnt>0){ gifts.push({id:p.id,name:p.name,count:cnt}); names.push(p.name); }
+    }else if(p.type==='amt'){
+      if(qty>=p.n){ disc+=p.x; names.push(p.name); }
+    }else{
+      if(qty>=p.n){ const d=Math.round(scope.reduce((s,i)=>s+i.price*i.qty,0)*p.x/100); if(d>0){ disc+=d; names.push(p.name); } }
+    }
+  });
+  return {disc,names,gifts};
+}
+
+/* ── 홈: 통계 + 판매 포커스 ── */
+function renderHome(){
+  const os=evOrders();
+  const tOs=os.filter(o=>o.ts.slice(0,10)===today());
+  $('stOrders').textContent=os.length+'건';
+  $('stOrdersToday').textContent='오늘 '+tOs.length+'건';
+  $('stSales').textContent=fmt(os.reduce((s,o)=>s+paid(o),0))+'원';
+  $('stSalesToday').textContent='오늘 '+fmt(tOs.reduce((s,o)=>s+paid(o),0))+'원';
+  $('stShip').textContent=os.filter(o=>o.ship!=='발송완료').length+'건';
+  const totStock=ev().products.reduce((s,p)=>s+p.stock,0);
+  const totOrdered=ev().products.reduce((s,p)=>s+orderedQty(p.id),0);
+  $('stBurn').textContent=(totStock?Math.round(totOrdered/totStock*100):0)+'%';
+  $('stBurnSub').textContent=`주문 ${totOrdered} / 준비 ${totStock}`;
+
+  // 판매 포커스
+  const fb=$('focusBox'); fb.innerHTML='';
+  promos().filter(p=>p.active).forEach(p=>fb.insertAdjacentHTML('beforeend',
+    `<div class="alert-item a-hot"><span class="tag" style="color:var(--blue);">🎁 이벤트</span><span><b>${esc(p.name)}</b> — ${promoDesc(p)} · ${esc(promoTarget(p))}${promoPrice(p)?` · <b>${promoPrice(p)}</b>`:''} (자동 적용 중)</span></div>`));
+  const ps=ev().products.filter(p=>p.stock>0);
+  if(!ps.length){ fb.innerHTML='<div class="empty">제품을 등록하면 재고 기반 추천이 표시됩니다.</div>'; }
+  else{
+    const out=ps.filter(p=>remain(p)<=0);
+    const low=ps.filter(p=>{const r=remain(p); return r>0&&r<=p.stock*0.2;});
+    const push=ps.filter(p=>remain(p)>p.stock*0.6).sort((a,b)=>remain(b)-remain(a)).slice(0,4);
+    push.forEach(p=>fb.insertAdjacentHTML('beforeend',
+      `<div class="alert-item a-push"><span class="tag" style="color:var(--green);">📣 중점판매</span><span><b>${esc(p.name)}${p.option?' · '+esc(p.option):''}</b> — 잔여 ${remain(p)}/${p.stock}개. 재고 여유가 많아요. 오늘 적극 추천해 주세요.</span></div>`));
+    low.forEach(p=>fb.insertAdjacentHTML('beforeend',
+      `<div class="alert-item a-low"><span class="tag" style="color:var(--amber);">⚠️ 품절임박</span><span><b>${esc(p.name)}${p.option?' · '+esc(p.option):''}</b> — 잔여 ${remain(p)}개. 곧 품절 안내가 필요해요.</span></div>`));
+    out.forEach(p=>{const ex=-remain(p); fb.insertAdjacentHTML('beforeend',
+      `<div class="alert-item a-out"><span class="tag" style="color:var(--red);">🏭 생산필요</span><span><b>${esc(p.name)}${p.option?' · '+esc(p.option):''}</b> — 준비수량 소진${ex>0?`, 초과 주문 <b>${ex}개</b>는 추가 생산 필요`:''}. 주문은 계속 받을 수 있습니다.</span></div>`);});
+    if(!push.length&&!low.length&&!out.length) fb.innerHTML='<div class="empty">모든 품목이 고른 속도로 판매 중입니다 👍</div>';
+  }
+
+  // 인기 TOP
+  const hb=$('hotBox'); hb.innerHTML='';
+  const ranked=ev().products.map(p=>({p,q:orderedQty(p.id)})).filter(x=>x.q>0).sort((a,b)=>b.q-a.q).slice(0,3);
+  if(!ranked.length) hb.innerHTML='<div class="empty" style="padding:14px 0;">아직 주문 데이터가 없습니다.</div>';
+  ranked.forEach((x,i)=>hb.insertAdjacentHTML('beforeend',
+    `<div class="alert-item a-hot"><span class="tag" style="color:var(--blue);">${['🥇','🥈','🥉'][i]} ${i+1}위</span><span><b>${esc(x.p.name)}${x.p.option?' · '+esc(x.p.option):''}</b> — ${x.q}개 주문</span></div>`));
+
+  // 전시 비교
+  const ct=$('evCompareRows'); ct.innerHTML='';
+  db.events.forEach(e=>{
+    const eo=evOrders(e.id);
+    ct.insertAdjacentHTML('beforeend',`<tr ${e.id===db.currentEventId?'style="font-weight:700;"':''}>
+      <td>${e.id===db.currentEventId?'▶ ':''}${esc(e.name)}</td>
+      <td class="num">${eo.length}건</td>
+      <td class="num">${fmt(eo.reduce((s,o)=>s+paid(o),0))}원</td>
+      <td class="num">${eo.filter(o=>o.ship!=='발송완료').length}건</td></tr>`);
+  });
+}
+
+/* ── 주소 찾기 (다음 우편번호 서비스) ── */
+let daumLoading=false;
+function loadDaum(cb){
+  if(window.daum&&window.daum.Postcode){ cb(); return; }
+  if(daumLoading) return;
+  daumLoading=true;
+  const s=document.createElement('script');
+  s.src='https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.embed.js';
+  s.onload=()=>{ daumLoading=false; cb(); };
+  s.onerror=()=>{ daumLoading=false; alert('주소 검색 서비스를 불러올 수 없습니다 (인터넷 연결 확인).\n주소를 직접 입력해 주세요.'); $('kAddr').focus(); };
+  document.head.appendChild(s);
+}
+function openPostcode(){
+  loadDaum(()=>{
+  const layer=$('kPostLayer');
+  layer.style.display='block';
+  new daum.Postcode({
+    oncomplete:function(data){
+      let addr=data.roadAddress||data.jibunAddress;
+      let extra='';
+      if(data.userSelectedType==='R'){
+        if(data.bname&&/[동|로|가]$/g.test(data.bname)) extra+=data.bname;
+        if(data.buildingName&&data.apartment==='Y') extra+=(extra?', ':'')+data.buildingName;
+        if(extra) addr+=' ('+extra+')';
+      }
+      $('kZip').value=data.zonecode;
+      $('kAddr').value=addr;
+      closePostcode();
+      $('kAddr2').focus();
+    },
+    width:'100%', height:'100%'
+  }).embed(layer);
+  });
+}
+function closePostcode(){ $('kPostLayer').style.display='none'; }
+
+/* ── 고객 작성 탭 ── */
+function prepCustTab(){
+  $('custForm').style.display='';
+  $('custDone').style.display='none';
+  $('custTitle').textContent=ev().name+' - 구매자 정보 기입';
+  $('kPrivacyBox').textContent=db.settings.privacyText;
+  $('kNoticeBox').textContent=db.settings.prodNotice||DEFAULT_NOTICE;
+  const act=promos().filter(p=>p.active);
+  $('kPromoBanner').innerHTML=act.map(p=>
+    `<div style="background:#eef3ff;border-radius:6px;padding:9px 12px;margin-bottom:8px;font-size:13px;line-height:1.6;">🎁 <b>${esc(p.name)}</b> — ${promoDesc(p)} · 대상: ${esc(promoTarget(p))}${promoPrice(p)?`<br><span style="color:var(--blue);font-weight:700;">→ ${promoPrice(p)}</span>`:''}</div>`).join('');
+  renderCustProducts();
+}
+function renderCustProducts(){
+  const box=$('kProducts'); box.innerHTML='';
+  const ps=ev().products.filter(p=>p.visible!==false);
+  if(!ps.length){
+    box.innerHTML='<div class="empty" style="text-align:left;padding:10px 2px;">등록된 제품이 없습니다. 아래 기타 란에 직접 입력해 주세요.</div>';
+    return;
+  }
+  ps.forEach(p=>{
+    box.insertAdjacentHTML('beforeend',`<div class="opt-row">
+      <input type="checkbox" id="kc_${p.id}" onchange="$('kq_${p.id}').style.visibility=this.checked?'visible':'hidden';updateCustSummary()">
+      <label for="kc_${p.id}" style="font-weight:400;">${esc(p.name)}${p.option?' ('+esc(p.option)+')':''} · ${fmt(p.price)}원${p.ship?` <span style="font-size:11.5px;color:var(--sub);">(배송비 ${fmt(p.ship)}원)</span>`:''}</label>
+      <input type="number" class="qty" id="kq_${p.id}" min="1" value="1" style="visibility:hidden;" title="수량" oninput="updateCustSummary()" onchange="updateCustSummary()">
+    </div>`);
+  });
+  updateCustSummary();
+}
+function collectItems(){
+  const items=[];
+  ev().products.filter(p=>p.visible!==false).forEach(p=>{
+    const c=$('kc_'+p.id);
+    if(c&&c.checked){
+      const q=Math.max(1,+($('kq_'+p.id)?.value||1));
+      items.push({pid:p.id,name:p.name,option:p.option,price:p.price,ship:p.ship||0,qty:q});
+    }
+  });
+  return items;
+}
+let giftSig='';
+function renderGiftSelects(gifts){
+  const sig=JSON.stringify(gifts.map(g=>[g.id,g.count]));
+  if(sig===giftSig) return;
+  giftSig=sig;
+  const box=$('kGifts'); box.innerHTML='';
+  const opts=ev().products.filter(p=>p.visible!==false).map(p=>`<option value="${p.id}">${esc(p.name)}${p.option?' ('+esc(p.option)+')':''}</option>`).join('');
+  gifts.forEach(g=>{
+    for(let i=0;i<g.count;i++){
+      box.insertAdjacentHTML('beforeend',`<div class="opt-row" style="background:#eef3ff;border-radius:6px;padding:9px 11px;margin-top:6px;">
+        <span style="font-weight:700;">🎁 ${esc(g.name)} 증정품</span>
+        <select class="gift-sel free" data-promo="${esc(g.name)}" style="margin-left:auto;flex:1;max-width:280px;">
+          <option value="">증정품 선택 (제품/색상)</option>${opts}
+        </select></div>`);
+    }
+  });
+}
+function updateCustSummary(){
+  const box=$('kSummary'); if(!box) return;
+  const items=collectItems();
+  const total=items.reduce((s,i)=>s+i.price*i.qty,0);
+  const promo=computePromo(items);
+  renderGiftSelects(promo.gifts);
+  const manual=Math.max(0,+($('kDiscount')?.value)||0);
+  const qty=items.reduce((s,i)=>s+i.qty,0);
+  const ship=items.reduce((s,i)=>s+(i.ship||0)*i.qty,0);
+  const final=total-promo.disc-manual+ship;
+  box.innerHTML=`
+    <div style="display:flex;justify-content:space-between;"><span>합계 (${qty}개)</span><b>${fmt(total)}원</b></div>
+    ${promo.gifts.map(g=>`<div style="display:flex;justify-content:space-between;color:var(--blue);"><span>🎁 ${esc(g.name)}</span><b>증정 ${g.count}개 (0원)</b></div>`).join('')}
+    ${promo.disc?`<div style="display:flex;justify-content:space-between;color:var(--red);"><span>🎁 이벤트 할인 (${esc(promo.names.join(', '))})</span><b>-${fmt(promo.disc)}원</b></div>`:''}
+    ${manual?`<div style="display:flex;justify-content:space-between;color:var(--red);"><span>현장 할인</span><b>-${fmt(manual)}원</b></div>`:''}
+    <div style="display:flex;justify-content:space-between;"><span>배송비 (제품별 합산)</span><b>${ship?fmt(ship)+'원':'없음'}</b></div>
+    <div style="display:flex;justify-content:space-between;border-top:1.5px solid #111;margin-top:4px;padding-top:6px;font-size:15px;"><span><b>결제금액</b></span><b>${fmt(final)}원</b></div>`;
+}
+function resetCustForm(){
+  ['kName','kPhone','kEmail','kZip','kAddr','kAddr2','kHopeDate','kShipMemo','kEtc','kPayEtc','kStaffMemo','kDiscount'].forEach(i=>$(i).value='');
+  giftSig=''; $('kGifts').innerHTML='';
+  closePostcode();
+  $('kEtcChk').checked=false; $('kConsent').checked=false; $('kNoticeChk').checked=false;
+  document.querySelectorAll('input[name="kPay"]').forEach(r=>r.checked=false);
+  renderCustProducts();
+}
+function submitCustOrder(){
+  const name=$('kName').value.trim(), phone=$('kPhone').value.trim();
+  const zip=$('kZip').value.trim();
+  const addr=(($('kAddr').value.trim()+' '+$('kAddr2').value.trim()).trim()+(zip?' (우편번호 : '+zip+')':'')).trim();
+  if(!name||!phone||!$('kAddr').value.trim()){ alert('이름, 연락처, 주소는 필수입니다.'); return; }
+  const items=collectItems();
+  const etc=$('kEtcChk').checked?$('kEtc').value.trim():'';
+  if(!items.length&&!etc){ alert('구매품을 선택해 주세요.'); return; }
+  const payR=document.querySelector('input[name="kPay"]:checked');
+  if(!payR){ alert('결제수단을 선택해 주세요.'); return; }
+  let pay=payR.value;
+  if(pay==='기타') pay='기타'+($('kPayEtc').value.trim()?' ('+$('kPayEtc').value.trim()+')':'');
+  if(!$('kNoticeChk').checked){ alert('제품 특성 안내 확인 및 동의가 필요합니다.'); return; }
+  if(!$('kConsent').checked){ alert('개인정보 수집 및 이용 동의가 필요합니다.'); return; }
+
+  const promo=computePromo(items);
+  const giftSels=[...document.querySelectorAll('#kGifts select')];
+  for(const s of giftSels){ if(!s.value){ alert('이벤트 증정품을 선택해 주세요.'); return; } }
+  const giftItems=giftSels.map(s=>{
+    const p=ev().products.find(x=>x.id===s.value);
+    return {pid:p.id,name:p.name,option:p.option,price:0,qty:1,gift:true,promo:s.dataset.promo};
+  });
+  const orderShip=items.reduce((s,i)=>s+(i.ship||0)*i.qty,0);
+
+  const no=today().replace(/-/g,'')+'-'+String(Date.now()).slice(-5);
+  const order={
+    id:'o'+Date.now(), eventId:db.currentEventId, no, ts:nowLocal(),
+    items:[...items,...giftItems], etc, total:items.reduce((s,i)=>s+i.price*i.qty,0),
+    promoDiscount:promo.disc, promoNames:promo.names,
+    discount:Math.max(0,+$('kDiscount').value||0),
+    shipFee:orderShip,
+    customer:{name,phone,email:$('kEmail').value.trim(),addr},
+    hopeDate:$('kHopeDate').value, shipMemo:$('kShipMemo').value.trim(), pay, ship:'상품준비', consent:true, noticeAgree:true,
+    staffMemo:$('kStaffMemo').value.trim(), memoBad:'', memoWhy:''
+  };
+  db.orders.unshift(order);
+  saveOrderDoc(order); renderHome();
+  $('custForm').style.display='none';
+  $('custDone').style.display='block';
+  window.scrollTo(0,0);
+  printOrder(order.id);
+  setTimeout(()=>{ resetCustForm(); $('custDone').style.display='none'; $('custForm').style.display=''; window.scrollTo(0,0); },4000);
+}
+
+/* ── 주문목록 ── */
+function renderOrders(){
+  $('listEvName').textContent='· '+ev().name;
+  const q=($('q').value||'').toLowerCase(), fp=$('fPay').value, fs=$('fShip').value;
+  const list=evOrders().filter(o=>
+    (!q||o.no.toLowerCase().includes(q)||o.customer.name.toLowerCase().includes(q)||o.customer.phone.includes(q)) &&
+    (!fp||o.pay.startsWith(fp)) && (!fs||o.ship===fs));
+  const tb=$('orderRows'); tb.innerHTML='';
+  $('orderEmpty').style.display=list.length?'none':'';
+  list.forEach(o=>{
+    const items=o.items.map(i=>`${esc(i.name)}${i.option?'('+esc(i.option)+')':''}${i.gift?'🎁':''}×${i.qty}`).join(', ')+(o.etc?` / 기타: ${esc(o.etc)}`:'');
+    const shipCls=o.ship==='발송완료'?'p-blue':'p-gray';
+    const memo=[o.staffMemo&&('📌 '+o.staffMemo), o.memoBad&&('😕 '+o.memoBad), o.memoWhy&&('💡 '+o.memoWhy)].filter(Boolean).join('\n');
+    tb.insertAdjacentHTML('beforeend',`<tr>
+      <td><b>${o.no}</b></td>
+      <td style="white-space:nowrap;">${o.ts.slice(5,10)} ${o.ts.slice(11,16)}</td>
+      <td><b>${esc(o.customer.name)}</b><br><span style="color:var(--sub);font-size:11.5px;">${esc(o.customer.phone)}</span></td>
+      <td style="max-width:230px;">${items}</td>
+      <td class="num"><b>${fmt(paid(o))}원</b>${o.discount?`<br><span style="font-size:11px;color:var(--red);">할인 -${fmt(o.discount)}</span>`:''}</td>
+      <td><span class="pill p-green">${esc(o.pay)}</span></td>
+      <td><span class="pill ${shipCls}" style="cursor:pointer;" onclick="cycleShip('${o.id}')" title="클릭하여 변경">${o.ship}</span></td>
+      <td class="memo-cell">${esc(memo)||'-'}</td>
+      <td style="white-space:nowrap;">
+        <button class="btn btn-line btn-sm" onclick="openDetail('${o.id}')">상세</button>
+        <button class="btn btn-line btn-sm" onclick="printOrder('${o.id}')">🖨️</button>
+        <button class="btn btn-red btn-sm" onclick="delOrder('${o.id}')">✕</button>
+      </td></tr>`);
+  });
+}
+function cycleShip(id){ const o=db.orders.find(x=>x.id===id); o.ship=o.ship==='상품준비'?'발송완료':'상품준비'; saveOrderDoc(o); renderOrders(); renderHome(); }
+function delOrder(id){
+  if(!confirm('주문을 삭제할까요? 재고 주문수량에서도 제외됩니다.')) return;
+  db.orders=db.orders.filter(o=>o.id!==id); deleteOrderDoc(id); renderAll(false);
+}
+function openDetail(id){
+  const o=db.orders.find(x=>x.id===id);
+  const rows=o.items.map(i=>`<tr><td>${esc(i.name)}${i.gift?' <span class="pill p-blue">🎁 증정'+(i.promo?' · '+esc(i.promo):'')+'</span>':''}</td><td>${esc(i.option)||'-'}</td><td class="num">${i.gift?'0원':fmt(i.price)+'원'}</td><td class="num">${i.qty}</td><td class="num">${fmt(i.price*i.qty)}원</td></tr>`).join('');
+  $('dlgTitle').textContent='주문 '+o.no;
+  $('dlgContent').innerHTML=`
+    <p style="font-size:13px;line-height:1.9;">
+      <b>${esc(o.customer.name)}</b> · ${esc(o.customer.phone)}${o.customer.email?' · '+esc(o.customer.email):''}<br>
+      📦 ${esc(o.customer.addr)}${o.shipMemo?'<br>🚪 배송 메모: '+esc(o.shipMemo):''}<br>
+      💳 ${esc(o.pay)} · 🚚 ${o.ship}${o.hopeDate?' · 희망배송일 '+o.hopeDate:''} · 🕐 ${o.ts.slice(0,16).replace('T',' ')}
+    </p>
+    <table style="margin:12px 0;"><thead><tr><th>제품</th><th>옵션</th><th class="num">단가</th><th class="num">수량</th><th class="num">금액</th></tr></thead>
+    <tbody>${rows}
+    ${o.etc?`<tr><td colspan="5">기타: ${esc(o.etc)}</td></tr>`:''}
+    <tr><td colspan="4" style="text-align:right;font-weight:800;">결제금액 (이벤트 ${o.promoDiscount?'-'+fmt(o.promoDiscount)+'원':'없음'} · 할인 ${o.discount?'-'+fmt(o.discount)+'원':'없음'} · 배송비 ${o.shipFee?fmt(o.shipFee)+'원':'없음'})</td><td class="num" style="font-weight:800;">${fmt(paid(o))}원</td></tr></tbody></table>
+    <div class="row" style="margin-top:14px;">
+      <div><label class="f">📌 담당자 메모</label><textarea id="dStaff">${esc(o.staffMemo)}</textarea></div>
+      <div style="flex:0 0 160px;"><label class="f">현장 할인 (원)</label><input type="number" id="dDiscount" min="0" value="${o.discount||0}"></div>
+    </div>
+    <div class="row">
+      <div><label class="f">😕 아쉬워했던 점</label><textarea id="dBad">${esc(o.memoBad)}</textarea></div>
+      <div><label class="f">💡 구매를 고려하게 한 점</label><textarea id="dWhy">${esc(o.memoWhy)}</textarea></div>
+    </div>
+    <div style="display:flex; gap:8px; justify-content:flex-end;">
+      <button class="btn btn-dark btn-sm" onclick="saveDetailMemo('${o.id}')">메모 저장</button>
+    </div>`;
+  dlg.showModal();
+}
+function saveDetailMemo(id){
+  const o=db.orders.find(x=>x.id===id);
+  o.staffMemo=$('dStaff').value.trim(); o.memoBad=$('dBad').value.trim(); o.memoWhy=$('dWhy').value.trim();
+  o.discount=Math.max(0,+$('dDiscount').value||0);
+  saveOrderDoc(o); dlg.close(); renderOrders(); renderHome();
+}
+
+/* ── 재고현황 ── */
+function renderStock(){
+  const tb=$('stockRows'); tb.innerHTML='';
+  $('stockEmpty').style.display=ev().products.length?'none':'';
+  ev().products.forEach(p=>{
+    const oq=orderedQty(p.id), rm=p.stock-oq;
+    const pct=p.stock?Math.round(oq/p.stock*100):(oq?100:0);
+    const low=rm<=p.stock*0.2;
+    const rmHtml=rm>=0?`${rm}${low?' ⚠️':''}`:`0 <span class="pill p-red">추가생산 ${-rm}</span>`;
+    tb.insertAdjacentHTML('beforeend',`<tr>
+      <td><b>${esc(p.name)}</b></td><td>${esc(p.option)||'-'}</td>
+      <td class="num">${fmt(p.price)}원</td>
+      <td class="num">${p.stock}</td><td class="num">${oq}</td>
+      <td class="num ${low?'stock-warn':''}" style="font-weight:800;white-space:nowrap;">${rmHtml}</td>
+      <td><div class="bar"><i class="${low?'low':''}" style="width:${Math.min(100,pct)}%;"></i></div><span style="font-size:11px;color:var(--sub);">${pct}% 소진</span></td>
+    </tr>`);
+  });
+}
+
+/* ── 설정: 전시 목록 ── */
+function renderEvRows(){
+  const tb=$('evRows'); tb.innerHTML='';
+  db.events.forEach(e=>{
+    tb.insertAdjacentHTML('beforeend',`<tr>
+      <td><b>${esc(e.name)}</b>${e.id===db.currentEventId?' <span class="pill p-blue">현재</span>':''}</td>
+      <td class="num">${evOrders(e.id).length}건</td>
+      <td class="num">${e.products.length}개</td>
+      <td style="white-space:nowrap;">
+        <button class="btn btn-line btn-sm" onclick="renameEvent('${e.id}')">이름변경</button>
+        <button class="btn btn-red btn-sm" onclick="delEvent('${e.id}')">삭제</button>
+      </td></tr>`);
+  });
+}
+
+/* ── 주문서 인쇄 (LOWLIT 양식) ── */
+function printOrder(id){
+  const o=db.orders.find(x=>x.id===id);
+  const s=db.settings;
+  const rows=o.items.map(i=>`<tr>
+    <td><b>${esc(i.name)}</b>${i.gift?' (🎁 증정'+(i.promo?' · '+esc(i.promo):'')+')':''}</td><td>${esc(i.option)||'-'}</td><td>${esc(o.ship)}</td>
+    <td class="num">${i.qty}</td><td class="num">${i.gift?'0 KRW':fmt(i.price)+' KRW'}</td><td class="num">${fmt(i.price*i.qty)} KRW</td></tr>`).join('')
+    +(o.etc?`<tr><td colspan="6">기타: ${esc(o.etc)}</td></tr>`:'');
+  $('printArea').innerHTML=`<div class="ps">
+    <div class="ps-co">${esc(s.coName)}</div>
+    <div class="ps-web">${esc(s.coWeb)}</div>
+
+    <div class="ps-meta">
+      <div><b>주문번호</b><span>${o.no}</span></div>
+      <div><b>주문일자</b><span>${o.ts.slice(0,19).replace('T',' ')}</span></div>
+      <div><b>결제수단</b><span>${esc(o.pay)}</span></div>
+      ${(o.promoNames&&o.promoNames.length)?`<div><b>적용 이벤트</b><span>${esc(o.promoNames.join(', '))}</span></div>`:''}
+      <div><b>배송관련 안내</b><span>${esc(s.shipNote)}</span></div>
+    </div>
+
+    <div class="ps-cols">
+      <div>
+        <div class="ps-h">배송정보</div>
+        <p>${esc(o.customer.addr)}<br>${esc(o.customer.phone)}<br>${esc(o.customer.name)}</p>
+      </div>
+      <div>
+        <div class="ps-h">주문자 정보</div>
+        <p>${esc(o.customer.name)}<br>${o.customer.email?esc(o.customer.email)+'<br>':''}${esc(o.customer.phone)}</p>
+        <div class="ps-sub">
+          <div class="ps-h">추가정보</div>
+          <p>${o.hopeDate?'희망 배송일 : '+o.hopeDate:''}${o.hopeDate&&o.shipMemo?'<br>':''}${o.shipMemo?'배송 메모 : '+esc(o.shipMemo):''}${!o.hopeDate&&!o.shipMemo?'-':''}</p>
+        </div>
+      </div>
+    </div>
+
+    <table>
+      <thead><tr><th>주문 내역</th><th>옵션</th><th>주문상태</th><th class="num">수량</th><th class="num">단가</th><th class="num">소계</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <table class="ps-sums"><tbody>
+      <tr><td>합계</td><td class="num">${fmt(o.total)} KRW</td></tr>
+      ${o.promoDiscount?`<tr><td>이벤트 할인${o.promoNames&&o.promoNames.length?' ('+esc(o.promoNames.join(', '))+')':''}</td><td class="num">-${fmt(o.promoDiscount)} KRW</td></tr>`:''}
+      ${o.discount?`<tr><td>할인</td><td class="num">-${fmt(o.discount)} KRW</td></tr>`:''}
+      <tr><td>배송비</td><td class="num">${o.shipFee?fmt(o.shipFee)+' KRW':'없음'}</td></tr>
+      <tr><td>결제금액</td><td class="num">${fmt(paid(o))} KRW</td></tr>
+    </tbody></table>
+
+    <div class="ps-notice">
+      <div class="ps-notice-h">제품 특성 및 교환·반품 안내</div>
+      <div class="ps-notice-b">${esc(s.prodNotice||DEFAULT_NOTICE)}</div>
+      ${o.noticeAgree?`<div class="ps-notice-a">※ 구매자는 주문 접수 시(${o.ts.slice(0,16).replace('T',' ')}) 위 제품 특성 안내를 확인하였으며, 해당 사항이 교환·반품 사유가 되지 않음에 동의하였습니다.</div>`:''}
+    </div>
+
+    <div class="ps-foot">
+      <b>${esc(s.coName)}</b><br>
+      ${esc(s.coAddr)}<br>
+      ${esc(s.coEmail)}
+    </div>
+  </div>`;
+  setTimeout(()=>window.print(),100);
+}
+
+/* ── 엑셀 내보내기 ── */
+function exportXlsx(){
+  const oRows=[['전시','주문번호','접수일시','구매자','연락처','이메일','배송주소','희망배송일','배송메모','제품명','옵션','단가','수량','금액','기타구매품','주문합계','이벤트할인','이벤트명','할인','배송비','결제금액','결제수단','발송상태','담당자메모','아쉬운점','구매결정요인']];
+  evOrders().slice().reverse().forEach(o=>{
+    const base=[ev().name,o.no,o.ts.slice(0,16).replace('T',' '),o.customer.name,o.customer.phone,o.customer.email,o.customer.addr,o.hopeDate,o.shipMemo||''];
+    if(o.items.length) o.items.forEach((i,n)=>{
+      oRows.push([...base, i.name+(i.gift?' (증정)':''), i.option, i.price, i.qty, i.price*i.qty,
+        n===0?o.etc:'', n===0?o.total:'', n===0?(o.promoDiscount||0):'', n===0?((o.promoNames||[]).join(', ')):'', n===0?(o.discount||0):'', n===0?(o.shipFee||0):'', n===0?paid(o):'', o.pay, o.ship,
+        n===0?o.staffMemo:'', n===0?o.memoBad:'', n===0?o.memoWhy:'']);
+    });
+    else oRows.push([...base,'','','','','',o.etc,o.total,o.promoDiscount||0,(o.promoNames||[]).join(', '),o.discount||0,o.shipFee||0,paid(o),o.pay,o.ship,o.staffMemo,o.memoBad,o.memoWhy]);
+  });
+  const sRows=[['제품명','옵션','판매가','준비수량','주문수량','잔여']];
+  ev().products.forEach(p=>{ const oq=orderedQty(p.id); sRows.push([p.name,p.option,p.price,p.stock,oq,p.stock-oq]); });
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(oRows), '주문내역');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(sRows), '재고현황');
+  const evn=ev().name.replace(/[\\/:*?"<>|]/g,'');
+  XLSX.writeFile(wb, `${evn}_주문데이터_${today()}.xlsx`);
+}
+
+/* ── 백업 ── */
+function backupJson(){
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(db,null,1)],{type:'application/json'}));
+  a.download=`전시주문_백업_${today()}.json`;
+  a.click();
+}
+function restoreJson(input){
+  const f=input.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=e=>{
+    try{
+      const d=JSON.parse(e.target.result);
+      if(!d.events||!d.orders) throw new Error('형식이 다릅니다');
+      if(!confirm(`전시 ${d.events.length}개, 주문 ${d.orders.length}건을 불러옵니다. 서버의 현재 데이터를 덮어씁니다 (모든 기기에 반영).`)) return;
+      db.events=d.events; db.settings=Object.assign({},DEFAULT_SETTINGS,d.settings||{});
+      save();
+      d.orders.forEach(o=>saveOrderDoc(o));
+      alert('불러오기 완료 ✅ 서버에 반영되었습니다.');
+    }catch(err){ alert('백업 파일을 읽을 수 없습니다: '+err.message); }
+    input.value='';
+  };
+  r.readAsText(f);
+}
+async function wipeAll(){
+  if(!confirm('서버의 모든 전시·주문·설정을 삭제합니다 (모든 기기에서 사라집니다). 계속할까요?')) return;
+  if(!confirm('정말 삭제할까요? 되돌릴 수 없습니다.')) return;
+  try{
+    const snap=await fs.collection('orders').get();
+    await Promise.all(snap.docs.map(d=>d.ref.delete()));
+    await fs.collection('app').doc('config').delete();
+    alert('전체 삭제 완료');
+  }catch(e){ alert('삭제 중 오류: '+e.message); }
+}
+
+function esc(s){ return String(s??'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function initSettings(){
+  const s=db.settings;
+  $('coName').value=s.coName; $('coWeb').value=s.coWeb; $('coAddr').value=s.coAddr;
+  $('coEmail').value=s.coEmail;
+  $('shipNote').value=s.shipNote||''; $('privacyText').value=s.privacyText; $('prodNotice').value=s.prodNotice||DEFAULT_NOTICE;
+}
+function renderAll(resetTab=true){
+  if(!db.events.length||!ev()) return;
+  renderEvSelect(); renderHome(); renderOrders(); renderStock(); renderProducts(); renderPromos(); renderEvRows();
+}
+prTypeUI();
+['input','change'].forEach(e=>{
+  $('kProducts').addEventListener(e,updateCustSummary);
+  $('kDiscount').addEventListener(e,updateCustSummary);
+});
+boot();
+</script>
+</body>
+</html>
