@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -202,6 +200,7 @@
     <button data-tab="list" onclick="showTab('list')">📦 주문목록</button>
     <button data-tab="stock" onclick="showTab('stock')">🗃️ 재고현황</button>
     <button data-tab="prod" onclick="showTab('prod')">📋 제품관리</button>
+    <button data-tab="sim" onclick="showTab('sim')">🧪 시뮬레이션</button>
     <button data-tab="set" onclick="showTab('set')">⚙️ 설정</button>
   </nav>
 
@@ -399,6 +398,14 @@
     </div>
   </section>
 
+  <!-- ── 시뮬레이션 탭 ── -->
+  <section id="tab-sim" style="display:none;">
+    <div class="card" style="padding:8px;">
+      <iframe id="simFrame" data-src="https://simulationand.netlify.app/" style="width:100%; height:78vh; border:none; border-radius:10px; background:#fff;" title="시뮬레이션"></iframe>
+    </div>
+    <p style="font-size:11.5px; color:var(--sub); text-align:right; padding:4px 6px;"><a href="https://simulationand.netlify.app/" target="_blank" style="color:var(--sub);">새 창에서 열기 ↗</a></p>
+  </section>
+
   <!-- ── 고객 작성 탭 ── -->
   <section id="tab-cust" style="display:none;">
   <div class="card cwrap" style="max-width:700px; margin:0 auto;">
@@ -474,7 +481,7 @@
   </div>
   </section>
 
-  <div class="foot">LOWLIT 전시 주문관리 v2.0 · 단일 파일 · 브라우저 저장</div>
+  <div class="foot">LOWLIT 전시 주문관리 v1.0</div>
 </div>
 </div>
 
@@ -662,10 +669,11 @@ function renameEvent(id){
 
 /* ── 탭 ── */
 function showTab(t){
-  ['home','cust','list','stock','prod','set'].forEach(k=>{
+  ['home','cust','list','stock','prod','sim','set'].forEach(k=>{
     $('tab-'+k).style.display=k===t?'':'none';
     document.querySelector(`nav.tabs button[data-tab="${k}"]`).classList.toggle('on',k===t);
   });
+  if(t==='sim'){ const f=$('simFrame'); if(!f.src) f.src=f.dataset.src; return; }
   if(t==='cust') prepCustTab();
   else renderAll(false);
 }
