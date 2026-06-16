@@ -510,6 +510,10 @@
 <div id="printArea"></div>
 
 <script>
+// 진단용: 화면 뒤에서 나는 오류를 눈에 보이게 표시
+window.onerror=function(msg,src,line){ alert('⚠️ 오류 발생\n'+msg+'\n(줄 '+line+')'); };
+window.addEventListener('unhandledrejection',e=>{ alert('⚠️ 처리 실패\n'+(e.reason&&e.reason.message?e.reason.message:e.reason)); });
+
 const fmt=n=>Number(n||0).toLocaleString('ko-KR');
 const $=id=>document.getElementById(id);
 const pad2=n=>String(n).padStart(2,'0');
@@ -594,7 +598,6 @@ function boot(){
   }
   firebase.initializeApp(firebaseConfig);
   auth=firebase.auth(); fs=firebase.firestore();
-  try{ fs.enablePersistence({synchronizeTabs:true}).catch(()=>{}); }catch(e){}
   auth.onAuthStateChanged(u=>{
     if(u&&u.email&&u.email.toLowerCase().endsWith('@'+ALLOWED_DOMAIN)){ startApp(u); }
     else{
@@ -649,15 +652,19 @@ function renderEvSelect(){
 function switchEvent(id){ db.currentEventId=id; localStorage.setItem('lowlit_current_event',id); renderAll(); }
 function openEventDlg(){ $('newEvName').value=''; renderEvSelect(); evDlg.showModal(); }
 function createEvent(){
+ try{
   const name=$('newEvName').value.trim();
   if(!name){ alert('전시명을 입력해 주세요.'); return; }
+  if(!fs){ alert('서버에 연결되지 않았습니다. 로그인 상태를 확인해 주세요.'); return; }
   const e={id:'e'+Date.now(), name, products:[]};
   const src=db.events.find(x=>x.id===$('newEvCopy').value);
   if(src) e.products=src.products.map(p=>({...p, id:'p'+Date.now()+Math.random().toString(36).slice(2,6), stock:0}));
   db.events.push(e); db.currentEventId=e.id;
   localStorage.setItem('lowlit_current_event',e.id);
-  save();
+  fs.collection('app').doc('config').set(clean({events:db.events, settings:db.settings}))
+    .catch(err=>alert('전시 저장 실패: '+err.message+'\n\nFirestore 보안 규칙을 확인해 주세요.'));
   evDlg.close(); renderAll();
+ }catch(err){ alert('전시 만들기 오류: '+err.message); }
 }
 function delEvent(id){
   if(db.events.length<=1){ alert('전시는 최소 1개가 필요합니다.'); return; }
