@@ -175,7 +175,7 @@
 <!-- ════════ 로그인 화면 ════════ -->
 <div id="loginView" style="display:none; text-align:center; padding:120px 20px;">
   <div class="brand" style="font-size:18px; margin-bottom:6px;">lowlit collective</div>
-  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 09</span></p>
+  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 10</span></p>
   <button class="btn btn-dark" style="padding:13px 28px;" onclick="login()">Google 계정으로 로그인</button>
   <p id="loginErr" style="color:var(--red); font-size:12.5px; margin-top:16px;"></p>
 </div>
@@ -263,6 +263,20 @@
   <section id="tab-stock" style="display:none;">
     <div class="card">
       <h2>🗃️ 재고 현황 <span class="hint">잔여 = 준비수량 − 주문수량 · 잔여 20% 이하 경고</span></h2>
+      <div class="toolbar">
+        <span style="font-size:12px;color:var(--sub);font-weight:600;">정렬</span>
+        <select id="stockSort" onchange="renderStock()">
+          <option value="remain_desc">잔여 많은 순</option>
+          <option value="remain_asc">잔여 적은 순 (품절임박 먼저)</option>
+          <option value="name">제품명 가나다순</option>
+          <option value="ordered_desc">주문 많은 순 (인기순)</option>
+          <option value="burn_desc">소진율 높은 순</option>
+          <option value="price_desc">판매가 높은 순</option>
+        </select>
+        <label style="font-size:12.5px;display:flex;align-items:center;gap:5px;cursor:pointer;">
+          <input type="checkbox" id="stockLowOnly" style="width:auto;" onchange="renderStock()"> 품절임박만 보기
+        </label>
+      </div>
       <div class="scroll-x">
       <table>
         <thead><tr>
@@ -285,16 +299,20 @@
           <div><label class="f">옵션</label><input type="text" id="pOpt" placeholder="색상/사이즈 등"></div>
         </div>
         <div class="row">
-          <div><label class="f">판매가 (원) *</label><input type="number" id="pPrice" min="0"></div>
+          <div><label class="f">정가 (원)</label><input type="number" id="pList" min="0" placeholder="할인 전 가격"></div>
+          <div><label class="f">판매가 (원) *</label><input type="number" id="pPrice" min="0" placeholder="실제 받는 금액"></div>
+        </div>
+        <div class="row">
           <div><label class="f">배송비 (개당·원)</label><input type="number" id="pShip" min="0" placeholder="0"></div>
           <div><label class="f">준비수량 *</label><input type="number" id="pStock" min="0"></div>
         </div>
         <button class="btn btn-dark btn-sm" onclick="addProduct()">제품 추가</button>
+        <p style="font-size:11.5px; color:var(--sub); margin-top:8px;">정가는 비워두면 판매가만 표시돼요. 정가가 판매가보다 높으면 작성 화면에 취소선으로 함께 보여줍니다.</p>
       </div>
 
       <div class="card">
         <h2>📥 일괄 등록</h2>
-        <label class="f">엑셀/CSV 업로드 (열: 제품명, 옵션, 판매가, 준비수량, 배송비)</label>
+        <label class="f">엑셀/CSV 업로드 (열: 제품명, 옵션, 판매가, 준비수량, 배송비, 정가)</label>
         <input type="file" id="pFile" accept=".xlsx,.xls,.csv" style="margin-bottom:10px;">
         <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px;">
           <button class="btn btn-dark btn-sm" onclick="importProducts()">업로드 등록</button>
@@ -312,7 +330,7 @@
       <h2>📋 등록된 제품 <span class="hint" id="prodEvName"></span></h2>
       <div class="scroll-x">
       <table>
-        <thead><tr><th>제품명</th><th>옵션</th><th class="num">판매가</th><th class="num">배송비</th><th class="num">준비수량</th><th>고객화면 노출</th><th></th></tr></thead>
+        <thead><tr><th>제품명</th><th>옵션</th><th class="num">정가</th><th class="num">판매가</th><th class="num">배송비</th><th class="num">준비수량</th><th>고객화면 노출</th><th></th></tr></thead>
         <tbody id="prodRows"></tbody>
       </table>
       </div>
@@ -483,7 +501,7 @@
   </div>
   </section>
 
-  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 09</div>
+  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 10</div>
 </div>
 </div>
 
@@ -703,16 +721,16 @@ function remain(p){ return p.stock-orderedQty(p.id); }
 /* ── 제품 ── */
 function addProduct(){
   const name=$('pName').value.trim(), opt=$('pOpt').value.trim();
-  const price=+$('pPrice').value, stock=+$('pStock').value, ship=Math.max(0,+$('pShip').value||0);
+  const price=+$('pPrice').value, stock=+$('pStock').value, ship=Math.max(0,+$('pShip').value||0), listPrice=Math.max(0,+$('pList').value||0);
   if(!name||isNaN(price)||price<0||isNaN(stock)||stock<0){ alert('제품명, 판매가, 준비수량을 확인해 주세요.'); return; }
-  upsertProduct(name,opt,price,stock,ship);
-  ['pName','pOpt','pPrice','pStock','pShip'].forEach(i=>$(i).value='');
+  upsertProduct(name,opt,price,stock,ship,listPrice);
+  ['pName','pOpt','pList','pPrice','pStock','pShip'].forEach(i=>$(i).value='');
   save(); renderAll(false);
 }
-function upsertProduct(name,opt,price,stock,ship=0){
+function upsertProduct(name,opt,price,stock,ship=0,listPrice=0){
   const ex=ev().products.find(p=>p.name===name&&p.option===opt);
-  if(ex){ ex.price=price; ex.stock=stock; ex.ship=ship; }
-  else ev().products.push({id:'p'+Date.now()+Math.random().toString(36).slice(2,6), name, option:opt, price, stock, ship, visible:true});
+  if(ex){ ex.price=price; ex.stock=stock; ex.ship=ship; ex.listPrice=listPrice; }
+  else ev().products.push({id:'p'+Date.now()+Math.random().toString(36).slice(2,6), name, option:opt, price, listPrice, stock, ship, visible:true});
 }
 function delProduct(id){
   if(orderedQty(id)>0 && !confirm('이미 주문이 있는 제품입니다. 삭제할까요?')) return;
@@ -722,13 +740,11 @@ function delProduct(id){
 function editStock(id,v){ const p=ev().products.find(p=>p.id===id); if(p){ p.stock=Math.max(0,+v||0); save(); renderHome(); } }
 function editField(id,field,v){
   const p=ev().products.find(p=>p.id===id); if(!p) return;
-  if(field==='name'){ if(!v.trim()){ alert('제품명은 비울 수 없습니다.'); renderProducts(); return; } p.name=v.trim(); }
-  else if(field==='option') p.option=v.trim();
-  else p[field]=Math.max(0,+v||0); // price, ship, stock
-  // 기존 주문에 들어간 제품명·옵션·가격도 함께 갱신 (집계 일치)
-  if(field==='name'||field==='option'||field==='price'){
+  p[field]=Math.max(0,+v||0); // listPrice, price, ship, stock
+  // 판매가를 바꾸면 기존 주문 금액도 함께 갱신 (집계 일치)
+  if(field==='price'){
     db.orders.forEach(o=>{ let changed=false;
-      o.items.forEach(it=>{ if(it.pid===id){ if(field==='name')it.name=p.name; else if(field==='option')it.option=p.option; else it.price=p.price; changed=true; } });
+      o.items.forEach(it=>{ if(it.pid===id && !it.gift){ it.price=p.price; changed=true; } });
       if(changed){ o.total=o.items.filter(i=>!i.gift).reduce((s,i)=>s+i.price*i.qty,0); saveOrderDoc(o); }
     });
   }
@@ -742,9 +758,9 @@ function renderProducts(){
   $('prodEmpty').style.display=ev().products.length?'none':'';
   ev().products.forEach(p=>{
     tb.insertAdjacentHTML('beforeend',`<tr>
-      <td><input type="text" value="${esc(p.name)}" style="width:150px;font-weight:700;" onchange="editField('${p.id}','name',this.value)"></td>
-      <td><input type="text" value="${esc(p.option)}" placeholder="-" style="width:100px;" onchange="editField('${p.id}','option',this.value)"></td>
-      <td class="num"><input type="number" value="${p.price}" min="0" style="width:90px;text-align:right;" onchange="editField('${p.id}','price',this.value)"></td>
+      <td><b>${esc(p.name)}</b></td><td>${esc(p.option)||'-'}</td>
+      <td class="num"><input type="number" value="${p.listPrice||0}" min="0" style="width:90px;text-align:right;color:#999;" title="정가(할인 전, 0이면 미표시)" onchange="editField('${p.id}','listPrice',this.value)"></td>
+      <td class="num"><input type="number" value="${p.price}" min="0" style="width:90px;text-align:right;font-weight:700;" onchange="editField('${p.id}','price',this.value)"></td>
       <td class="num"><input type="number" value="${p.ship||0}" min="0" style="width:80px;text-align:right;" onchange="editField('${p.id}','ship',this.value)"></td>
       <td class="num"><input type="number" value="${p.stock}" min="0" style="width:80px;text-align:right;" onchange="editField('${p.id}','stock',this.value)"></td>
       <td><span class="pill ${p.visible===false?'p-gray':'p-green'}" style="cursor:pointer;" onclick="toggleVisible('${p.id}')">${p.visible===false?'숨김':'노출'}</span></td>
@@ -768,9 +784,9 @@ function importProducts(){
       const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1});
       let n=0;
       rows.slice(1).forEach(row=>{
-        const [name,opt,price,stock,ship]=row;
+        const [name,opt,price,stock,ship,listPrice]=row;
         if(!name) return;
-        upsertProduct(String(name).trim(), String(opt||'').trim(), +price||0, +stock||0, +ship||0); n++;
+        upsertProduct(String(name).trim(), String(opt||'').trim(), +price||0, +stock||0, +ship||0, +listPrice||0); n++;
       });
       save(); renderAll(false);
       alert(n+'개 품목을 등록했습니다.');
@@ -780,7 +796,7 @@ function importProducts(){
   r.readAsArrayBuffer(f);
 }
 function downloadTemplate(){
-  const ws=XLSX.utils.aoa_to_sheet([['제품명','옵션','판매가','준비수량','배송비'],['예시) A. 퓨어화이트','',39000,30,3000]]);
+  const ws=XLSX.utils.aoa_to_sheet([['제품명','옵션','판매가','준비수량','배송비','정가'],['예시) A. 퓨어화이트','',39000,30,3000,45000]]);
   const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'제품');
   XLSX.writeFile(wb,'제품등록_서식.xlsx');
 }
@@ -963,7 +979,7 @@ function renderCustProducts(){
   ps.forEach(p=>{
     box.insertAdjacentHTML('beforeend',`<div class="opt-row">
       <input type="checkbox" id="kc_${p.id}" onchange="$('kq_${p.id}').style.visibility=this.checked?'visible':'hidden';updateCustSummary()">
-      <label for="kc_${p.id}" style="font-weight:400;">${esc(p.name)}${p.option?' ('+esc(p.option)+')':''} · ${fmt(p.price)}원${p.ship?` <span style="font-size:11.5px;color:var(--sub);">(배송비 ${fmt(p.ship)}원)</span>`:''}</label>
+      <label for="kc_${p.id}" style="font-weight:400;">${esc(p.name)}${p.option?' ('+esc(p.option)+')':''} · ${p.listPrice>p.price?`<span style="color:#aaa;text-decoration:line-through;">${fmt(p.listPrice)}원</span> `:''}${fmt(p.price)}원${p.ship?` <span style="font-size:11.5px;color:var(--sub);">(배송비 ${fmt(p.ship)}원)</span>`:''}</label>
       <input type="number" class="qty" id="kq_${p.id}" min="1" value="1" style="visibility:hidden;" title="수량" oninput="updateCustSummary()" onchange="updateCustSummary()">
     </div>`);
   });
@@ -975,7 +991,7 @@ function collectItems(){
     const c=$('kc_'+p.id);
     if(c&&c.checked){
       const q=Math.max(1,+($('kq_'+p.id)?.value||1));
-      items.push({pid:p.id,name:p.name,option:p.option,price:p.price,ship:p.ship||0,qty:q});
+      items.push({pid:p.id,name:p.name,option:p.option,price:p.price,listPrice:p.listPrice||0,ship:p.ship||0,qty:q});
     }
   });
   return items;
@@ -1138,11 +1154,28 @@ function saveDetailMemo(id){
 /* ── 재고현황 ── */
 function renderStock(){
   const tb=$('stockRows'); tb.innerHTML='';
-  $('stockEmpty').style.display=ev().products.length?'none':'';
-  ev().products.forEach(p=>{
+  const sort=$('stockSort')?$('stockSort').value:'remain_desc';
+  const lowOnly=$('stockLowOnly')&&$('stockLowOnly').checked;
+  let rows=ev().products.map(p=>{
     const oq=orderedQty(p.id), rm=p.stock-oq;
-    const pct=p.stock?Math.round(oq/p.stock*100):(oq?100:0);
-    const low=rm<=p.stock*0.2;
+    return {p, oq, rm, pct:p.stock?Math.round(oq/p.stock*100):(oq?100:0), low:rm<=p.stock*0.2};
+  });
+  if(lowOnly) rows=rows.filter(r=>r.low);
+  const coll=new Intl.Collator('ko');
+  rows.sort((a,b)=>{
+    switch(sort){
+      case 'remain_asc': return a.rm-b.rm;
+      case 'name': return coll.compare(a.p.name+a.p.option, b.p.name+b.p.option);
+      case 'ordered_desc': return b.oq-a.oq;
+      case 'burn_desc': return b.pct-a.pct;
+      case 'price_desc': return b.p.price-a.p.price;
+      default: return b.rm-a.rm; // remain_desc
+    }
+  });
+  $('stockEmpty').style.display=rows.length?'none':'';
+  if(!rows.length&&ev().products.length) $('stockEmpty').textContent='조건에 맞는 제품이 없습니다.';
+  else $('stockEmpty').textContent='등록된 제품이 없습니다.';
+  rows.forEach(({p,oq,rm,pct,low})=>{
     const rmHtml=rm>=0?`${rm}${low?' ⚠️':''}`:`0 <span class="pill p-red">추가생산 ${-rm}</span>`;
     tb.insertAdjacentHTML('beforeend',`<tr>
       <td><b>${esc(p.name)}</b></td><td>${esc(p.option)||'-'}</td>
@@ -1174,7 +1207,7 @@ function orderSheetHTML(o,pageBreak){
   const s=db.settings;
   const rows=o.items.map(i=>`<tr>
     <td><b>${esc(i.name)}</b>${i.gift?' (🎁 증정'+(i.promo?' · '+esc(i.promo):'')+')':''}</td><td>${esc(i.option)||'-'}</td><td>${esc(o.ship)}</td>
-    <td class="num">${i.qty}</td><td class="num">${i.gift?'0 KRW':fmt(i.price)+' KRW'}</td><td class="num">${fmt(i.price*i.qty)} KRW</td></tr>`).join('')
+    <td class="num">${i.qty}</td><td class="num">${i.gift?'0 KRW':(i.listPrice>i.price?`<s style="color:#999;">${fmt(i.listPrice)}</s><br>`:'')+fmt(i.price)+' KRW'}</td><td class="num">${fmt(i.price*i.qty)} KRW</td></tr>`).join('')
     +(o.etc?`<tr><td colspan="6">기타: ${esc(o.etc)}</td></tr>`:'');
   return `<div class="ps"${pageBreak?' style="page-break-before:always;"':''}>
     <div class="ps-co">${esc(s.coName)}</div>
