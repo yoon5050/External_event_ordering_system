@@ -8,6 +8,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.embed.js" async></script>
 <style>
   :root{
     --bg:#f6f6f4; --card:#fff; --ink:#1a1a1a; --sub:#8a8a86; --line:#ececea;
@@ -243,6 +244,7 @@
           <option value="">상태: 전체</option><option>상품준비</option><option>발송완료</option>
         </select>
         <div class="spacer"></div>
+        <button class="btn btn-line btn-sm" onclick="printAllOrders()">🖨️ 주문서 한번에 출력</button>
         <button class="btn btn-line btn-sm" onclick="exportXlsx()">📤 엑셀 내보내기</button>
       </div>
       <div class="scroll-x">
@@ -571,12 +573,19 @@ const DEFAULT_SETTINGS={
 let db={events:[], currentEventId:null, orders:[], settings:Object.assign({},DEFAULT_SETTINGS)};
 let fs=null, auth=null, configReady=false, started=false;
 
+function clean(x){ return JSON.parse(JSON.stringify(x)); } // undefined 제거 + 순수 객체화
 function save(){ // 전시·제품·이벤트·설정 공유 저장 (모든 기기에 실시간 반영)
   if(!fs) return;
-  fs.collection('app').doc('config').set({events:JSON.parse(JSON.stringify(db.events)), settings:db.settings})
-    .catch(e=>alert('저장 실패: '+e.message));
+  try{
+    fs.collection('app').doc('config').set(clean({events:db.events, settings:db.settings}))
+      .catch(e=>alert('저장 실패: '+e.message));
+  }catch(e){ alert('저장 오류: '+e.message); }
 }
-function saveOrderDoc(o){ if(fs) fs.collection('orders').doc(o.id).set(JSON.parse(JSON.stringify(o))).catch(e=>alert('주문 저장 실패: '+e.message)); }
+function saveOrderDoc(o){
+  if(!fs) return;
+  try{ fs.collection('orders').doc(o.id).set(clean(o)).catch(e=>alert('주문 저장 실패: '+e.message)); }
+  catch(e){ alert('주문 저장 오류: '+e.message); }
+}
 function deleteOrderDoc(id){ if(fs) fs.collection('orders').doc(id).delete().catch(e=>alert('삭제 실패: '+e.message)); }
 
 function boot(){
@@ -875,16 +884,16 @@ function renderHome(){
 }
 
 /* ── 주소 찾기 (다음 우편번호 서비스) ── */
-let daumLoading=false;
-function loadDaum(cb){
+function loadDaum(cb,tries){
+  tries=tries||0;
   if(window.daum&&window.daum.Postcode){ cb(); return; }
-  if(daumLoading) return;
-  daumLoading=true;
-  const s=document.createElement('script');
-  s.src='https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.embed.js';
-  s.onload=()=>{ daumLoading=false; cb(); };
-  s.onerror=()=>{ daumLoading=false; alert('주소 검색 서비스를 불러올 수 없습니다 (인터넷 연결 확인).\n주소를 직접 입력해 주세요.'); $('kAddr').focus(); };
-  document.head.appendChild(s);
+  if(tries===0){ // 동적 로드 시도 (정적 태그가 차단됐을 경우 대비)
+    const s=document.createElement('script');
+    s.src='https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.embed.js?'+Date.now();
+    document.head.appendChild(s);
+  }
+  if(tries>40){ alert('주소 검색 서비스를 불러올 수 없습니다 (인터넷 연결 확인).\n주소를 직접 입력해 주세요.'); $('kAddr').focus(); return; }
+  setTimeout(()=>loadDaum(cb,tries+1),150); // 최대 6초까지 재시도
 }
 function openPostcode(){
   loadDaum(()=>{
@@ -1139,14 +1148,13 @@ function renderEvRows(){
 }
 
 /* ── 주문서 인쇄 (LOWLIT 양식) ── */
-function printOrder(id){
-  const o=db.orders.find(x=>x.id===id);
+function orderSheetHTML(o,pageBreak){
   const s=db.settings;
   const rows=o.items.map(i=>`<tr>
     <td><b>${esc(i.name)}</b>${i.gift?' (🎁 증정'+(i.promo?' · '+esc(i.promo):'')+')':''}</td><td>${esc(i.option)||'-'}</td><td>${esc(o.ship)}</td>
     <td class="num">${i.qty}</td><td class="num">${i.gift?'0 KRW':fmt(i.price)+' KRW'}</td><td class="num">${fmt(i.price*i.qty)} KRW</td></tr>`).join('')
     +(o.etc?`<tr><td colspan="6">기타: ${esc(o.etc)}</td></tr>`:'');
-  $('printArea').innerHTML=`<div class="ps">
+  return `<div class="ps"${pageBreak?' style="page-break-before:always;"':''}>
     <div class="ps-co">${esc(s.coName)}</div>
     <div class="ps-web">${esc(s.coWeb)}</div>
 
@@ -1197,7 +1205,22 @@ function printOrder(id){
       ${esc(s.coEmail)}
     </div>
   </div>`;
+}
+function printOrder(id){
+  const o=db.orders.find(x=>x.id===id);
+  $('printArea').innerHTML=orderSheetHTML(o,false);
   setTimeout(()=>window.print(),100);
+}
+function printAllOrders(){
+  // 주문목록의 현재 필터/검색 결과를 그대로, 오래된 순으로 한 장씩 출력
+  const q=($('q').value||'').toLowerCase(), fp=$('fPay').value, fs2=$('fShip').value;
+  const list=evOrders().filter(o=>
+    (!q||o.no.toLowerCase().includes(q)||o.customer.name.toLowerCase().includes(q)||o.customer.phone.includes(q)) &&
+    (!fp||o.pay.startsWith(fp)) && (!fs2||o.ship===fs2)).slice().reverse();
+  if(!list.length){ alert('출력할 주문이 없습니다.'); return; }
+  if(list.length>1 && !confirm(`현재 목록의 주문 ${list.length}건을 한 건씩(장당 1건) 출력합니다. 계속할까요?`)) return;
+  $('printArea').innerHTML=list.map((o,i)=>orderSheetHTML(o,i>0)).join('');
+  setTimeout(()=>window.print(),150);
 }
 
 /* ── 엑셀 내보내기 ── */
