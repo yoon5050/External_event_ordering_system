@@ -175,7 +175,7 @@
 <!-- ════════ 로그인 화면 ════════ -->
 <div id="loginView" style="display:none; text-align:center; padding:120px 20px;">
   <div class="brand" style="font-size:18px; margin-bottom:6px;">lowlit collective</div>
-  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 08</span></p>
+  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 09</span></p>
   <button class="btn btn-dark" style="padding:13px 28px;" onclick="login()">Google 계정으로 로그인</button>
   <p id="loginErr" style="color:var(--red); font-size:12.5px; margin-top:16px;"></p>
 </div>
@@ -483,7 +483,7 @@
   </div>
   </section>
 
-  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 08</div>
+  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 09</div>
 </div>
 </div>
 
@@ -720,6 +720,20 @@ function delProduct(id){
   ev().products=ev().products.filter(p=>p.id!==id); save(); renderAll(false);
 }
 function editStock(id,v){ const p=ev().products.find(p=>p.id===id); if(p){ p.stock=Math.max(0,+v||0); save(); renderHome(); } }
+function editField(id,field,v){
+  const p=ev().products.find(p=>p.id===id); if(!p) return;
+  if(field==='name'){ if(!v.trim()){ alert('제품명은 비울 수 없습니다.'); renderProducts(); return; } p.name=v.trim(); }
+  else if(field==='option') p.option=v.trim();
+  else p[field]=Math.max(0,+v||0); // price, ship, stock
+  // 기존 주문에 들어간 제품명·옵션·가격도 함께 갱신 (집계 일치)
+  if(field==='name'||field==='option'||field==='price'){
+    db.orders.forEach(o=>{ let changed=false;
+      o.items.forEach(it=>{ if(it.pid===id){ if(field==='name')it.name=p.name; else if(field==='option')it.option=p.option; else it.price=p.price; changed=true; } });
+      if(changed){ o.total=o.items.filter(i=>!i.gift).reduce((s,i)=>s+i.price*i.qty,0); saveOrderDoc(o); }
+    });
+  }
+  save(); renderAll(false);
+}
 function editShip(id,v){ const p=ev().products.find(p=>p.id===id); if(p){ p.ship=Math.max(0,+v||0); save(); } }
 function toggleVisible(id){ const p=ev().products.find(p=>p.id===id); p.visible=p.visible===false?true:false; save(); renderProducts(); }
 function renderProducts(){
@@ -728,10 +742,11 @@ function renderProducts(){
   $('prodEmpty').style.display=ev().products.length?'none':'';
   ev().products.forEach(p=>{
     tb.insertAdjacentHTML('beforeend',`<tr>
-      <td><b>${esc(p.name)}</b></td><td>${esc(p.option)||'-'}</td>
-      <td class="num">${fmt(p.price)}원</td>
-      <td class="num"><input type="number" value="${p.ship||0}" min="0" style="width:80px;text-align:right;" onchange="editShip('${p.id}',this.value)"></td>
-      <td class="num"><input type="number" value="${p.stock}" min="0" style="width:80px;text-align:right;" onchange="editStock('${p.id}',this.value)"></td>
+      <td><input type="text" value="${esc(p.name)}" style="width:150px;font-weight:700;" onchange="editField('${p.id}','name',this.value)"></td>
+      <td><input type="text" value="${esc(p.option)}" placeholder="-" style="width:100px;" onchange="editField('${p.id}','option',this.value)"></td>
+      <td class="num"><input type="number" value="${p.price}" min="0" style="width:90px;text-align:right;" onchange="editField('${p.id}','price',this.value)"></td>
+      <td class="num"><input type="number" value="${p.ship||0}" min="0" style="width:80px;text-align:right;" onchange="editField('${p.id}','ship',this.value)"></td>
+      <td class="num"><input type="number" value="${p.stock}" min="0" style="width:80px;text-align:right;" onchange="editField('${p.id}','stock',this.value)"></td>
       <td><span class="pill ${p.visible===false?'p-gray':'p-green'}" style="cursor:pointer;" onclick="toggleVisible('${p.id}')">${p.visible===false?'숨김':'노출'}</span></td>
       <td><button class="btn btn-red btn-sm" onclick="delProduct('${p.id}')">삭제</button></td></tr>`);
   });
