@@ -8,7 +8,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.embed.js" async></script>
+<script src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js" async></script>
 <style>
   :root{
     --bg:#f6f6f4; --card:#fff; --ink:#1a1a1a; --sub:#8a8a86; --line:#ececea;
@@ -175,7 +175,7 @@
 <!-- ════════ 로그인 화면 ════════ -->
 <div id="loginView" style="display:none; text-align:center; padding:120px 20px;">
   <div class="brand" style="font-size:18px; margin-bottom:6px;">lowlit collective</div>
-  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용</p>
+  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 08</span></p>
   <button class="btn btn-dark" style="padding:13px 28px;" onclick="login()">Google 계정으로 로그인</button>
   <p id="loginErr" style="color:var(--red); font-size:12.5px; margin-top:16px;"></p>
 </div>
@@ -483,7 +483,7 @@
   </div>
   </section>
 
-  <div class="foot">LOWLIT 전시 주문관리 v1.0</div>
+  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 08</div>
 </div>
 </div>
 
@@ -502,7 +502,7 @@
     <div class="row"><div><label class="f">전시명 *</label><input type="text" id="newEvName" placeholder="예: 서울디자인페스티벌 2026"></div></div>
     <div class="row"><div><label class="f">제품 구성 가져오기 (선택)</label><select id="newEvCopy"></select></div></div>
     <p style="font-size:12px; color:var(--sub); margin-bottom:14px;">제품을 가져오면 품목·가격이 복사됩니다. 준비수량은 새로 입력하세요.</p>
-    <button class="btn btn-dark" onclick="createEvent()">전시 만들기</button>
+    <button class="btn btn-dark" onclick="createNewEvent()">전시 만들기</button>
   </div>
 </dialog>
 
@@ -651,7 +651,7 @@ function renderEvSelect(){
 }
 function switchEvent(id){ db.currentEventId=id; localStorage.setItem('lowlit_current_event',id); renderAll(); }
 function openEventDlg(){ $('newEvName').value=''; renderEvSelect(); evDlg.showModal(); }
-function createEvent(){
+function createNewEvent(){
  try{
   const name=$('newEvName').value.trim();
   if(!name){ alert('전시명을 입력해 주세요.'); return; }
@@ -896,11 +896,11 @@ function loadDaum(cb,tries){
   if(window.daum&&window.daum.Postcode){ cb(); return; }
   if(tries===0){ // 동적 로드 시도 (정적 태그가 차단됐을 경우 대비)
     const s=document.createElement('script');
-    s.src='https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.embed.js?'+Date.now();
+    s.src='https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js?'+Date.now();
     document.head.appendChild(s);
   }
-  if(tries>40){ alert('주소 검색 서비스를 불러올 수 없습니다 (인터넷 연결 확인).\n주소를 직접 입력해 주세요.'); $('kAddr').focus(); return; }
-  setTimeout(()=>loadDaum(cb,tries+1),150); // 최대 6초까지 재시도
+  if(tries>50){ alert('주소 검색 서비스를 불러올 수 없습니다.\n\n• 광고차단(AdBlock/uBlock) 확장 프로그램이 켜져 있으면 daumcdn 주소를 막을 수 있어요. 잠시 꺼보세요.\n• 또는 아래 주소 칸에 직접 입력하셔도 됩니다.'); $('kAddr').focus(); return; }
+  setTimeout(()=>loadDaum(cb,tries+1),150); // 최대 약 7.5초까지 재시도
 }
 function openPostcode(){
   loadDaum(()=>{
