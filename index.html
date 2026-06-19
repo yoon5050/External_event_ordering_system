@@ -175,7 +175,7 @@
 <!-- ════════ 로그인 화면 ════════ -->
 <div id="loginView" style="display:none; text-align:center; padding:120px 20px;">
   <div class="brand" style="font-size:18px; margin-bottom:6px;">lowlit collective</div>
-  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 12</span></p>
+  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 13</span></p>
   <button class="btn btn-dark" style="padding:13px 28px;" onclick="login()">Google 계정으로 로그인</button>
   <p id="loginErr" style="color:var(--red); font-size:12.5px; margin-top:16px;"></p>
 </div>
@@ -328,7 +328,9 @@
     </div>
 
     <div class="card">
-      <h2>📋 등록된 제품 <span class="hint" id="prodEvName"></span></h2>
+      <h2>📋 등록된 제품 <span class="hint" id="prodEvName"></span>
+        <button class="btn btn-line btn-sm" style="margin-left:auto;" onclick="printProductList()">📄 제품 체크리스트 PDF</button>
+      </h2>
       <div class="scroll-x">
       <table>
         <thead><tr><th>색상</th><th>제품명</th><th>옵션</th><th class="num">정가</th><th class="num">판매가</th><th class="num">배송비</th><th class="num">준비수량</th><th>고객화면 노출</th><th></th></tr></thead>
@@ -502,7 +504,7 @@
   </div>
   </section>
 
-  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 12</div>
+  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 13</div>
 </div>
 </div>
 
@@ -983,15 +985,40 @@ function renderCustProducts(){
     box.innerHTML='<div class="empty" style="text-align:left;padding:10px 2px;">등록된 제품이 없습니다. 아래 기타 란에 직접 입력해 주세요.</div>';
     return;
   }
-  ps.forEach(p=>{
-    box.insertAdjacentHTML('beforeend',`<div class="opt-row">
-      <input type="checkbox" id="kc_${p.id}" onchange="$('kq_${p.id}').style.visibility=this.checked?'visible':'hidden';updateCustSummary()">
+  // 대분류(제품명)별로 묶어 아코디언으로 표시 (순서 유지)
+  const order=[], map={};
+  ps.forEach(p=>{ if(!map[p.name]){ map[p.name]=[]; order.push(p.name); } map[p.name].push(p); });
+  order.forEach((gName,gi)=>{
+    const list=map[gName];
+    const opts=list.map(p=>`<div class="opt-row" style="padding-left:8px;">
+      <input type="checkbox" id="kc_${p.id}" data-grp="${gi}" onchange="$('kq_${p.id}').style.visibility=this.checked?'visible':'hidden';updateCustSummary()">
       <span style="display:inline-block;width:22px;height:22px;border-radius:5px;border:1px solid #ccc;background:${p.color||'#e0e0e0'};flex-shrink:0;"></span>
-      <label for="kc_${p.id}" style="font-weight:400;">${esc(p.name)}${p.option?' ('+esc(p.option)+')':''} · ${p.listPrice>p.price?`<span style="color:#aaa;text-decoration:line-through;">${fmt(p.listPrice)}원</span> `:''}${fmt(p.price)}원${p.ship?` <span style="font-size:11.5px;color:var(--sub);">(배송비 ${fmt(p.ship)}원)</span>`:''}</label>
+      <label for="kc_${p.id}" style="font-weight:400;">${esc(p.option||gName)} · ${p.listPrice>p.price?`<span style="color:#aaa;text-decoration:line-through;">${fmt(p.listPrice)}원</span> `:''}${fmt(p.price)}원${p.ship?` <span style="font-size:11.5px;color:var(--sub);">(배송비 ${fmt(p.ship)}원)</span>`:''}</label>
       <input type="number" class="qty" id="kq_${p.id}" min="1" value="1" style="visibility:hidden;" title="수량" oninput="updateCustSummary()" onchange="updateCustSummary()">
+    </div>`).join('');
+    box.insertAdjacentHTML('beforeend',`<div style="border:1.5px solid #e3e3df;border-radius:8px;margin-bottom:8px;overflow:hidden;">
+      <div onclick="toggleGroup(${gi})" style="display:flex;align-items:center;gap:8px;padding:11px 13px;cursor:pointer;background:#fafaf8;user-select:none;">
+        <span id="garr_${gi}" style="font-size:11px;color:#999;width:12px;">▶</span>
+        <b style="font-size:14px;">${esc(gName)}</b>
+        <span style="color:var(--sub);font-size:12px;">· ${list.length}종</span>
+        <span id="gsel_${gi}" style="margin-left:auto;font-size:12px;font-weight:700;color:var(--green);"></span>
+      </div>
+      <div id="gbody_${gi}" style="display:none;padding:6px 10px 10px;">${opts}</div>
     </div>`);
   });
   updateCustSummary();
+}
+function toggleGroup(gi){
+  const b=$('gbody_'+gi), a=$('garr_'+gi);
+  const show=b.style.display==='none';
+  b.style.display=show?'':'none'; a.textContent=show?'▼':'▶';
+}
+function updateGroupBadges(){
+  document.querySelectorAll('[id^="gbody_"]').forEach(b=>{
+    const gi=b.id.split('_')[1];
+    const n=b.querySelectorAll('input[type=checkbox]:checked').length;
+    const sel=$('gsel_'+gi); if(sel) sel.textContent=n?`✓ ${n}개 선택`:'';
+  });
 }
 function collectItems(){
   const items=[];
@@ -1023,6 +1050,7 @@ function renderGiftSelects(gifts){
 }
 function updateCustSummary(){
   const box=$('kSummary'); if(!box) return;
+  updateGroupBadges();
   const items=collectItems();
   const total=items.reduce((s,i)=>s+i.price*i.qty,0);
   const promo=computePromo(items);
@@ -1293,6 +1321,44 @@ function orderSheetHTML(o,pageBreak){
 function printOrder(id){
   const o=db.orders.find(x=>x.id===id);
   $('printArea').innerHTML=orderSheetHTML(o,false);
+  setTimeout(()=>window.print(),100);
+}
+function printProductList(){
+  const ps=ev().products;
+  if(!ps.length){ alert('등록된 제품이 없습니다.'); return; }
+  // 대분류별로 묶어 출력
+  const order=[], map={};
+  ps.forEach(p=>{ if(!map[p.name]){ map[p.name]=[]; order.push(p.name); } map[p.name].push(p); });
+  let body='';
+  order.forEach(gName=>{
+    body+=`<tr><td colspan="8" style="background:#f4f4f2;font-weight:800;">${esc(gName)} (${map[gName].length}종)</td></tr>`;
+    map[gName].forEach(p=>{
+      const oq=orderedQty(p.id), rm=p.stock-oq;
+      body+=`<tr>
+        <td style="text-align:center;font-size:15px;">☐</td>
+        <td style="text-align:center;"><span style="display:inline-block;width:14px;height:14px;border:1px solid #999;background:${p.color||'#e0e0e0'};vertical-align:middle;"></span></td>
+        <td>${esc(p.option)||'-'}</td>
+        <td style="text-align:right;">${fmt(p.price)}원</td>
+        <td style="text-align:right;">${p.ship?fmt(p.ship)+'원':'-'}</td>
+        <td style="text-align:right;">${p.stock}</td>
+        <td style="text-align:right;">${oq}</td>
+        <td style="text-align:right;font-weight:700;${rm<0?'color:#d94f3d;':''}">${rm}</td>
+      </tr>`;
+    });
+  });
+  const totalStock=ps.reduce((s,p)=>s+p.stock,0), totalOrd=ps.reduce((s,p)=>s+orderedQty(p.id),0);
+  $('printArea').innerHTML=`<div class="ps">
+    <div class="ps-co">${esc(db.settings.coName)}</div>
+    <div style="font-size:15px;font-weight:700;margin-top:8px;">${esc(ev().name)} · 제품 준비 체크리스트</div>
+    <div style="font-size:11px;color:#888;margin-top:3px;">출력 ${nowLocal().slice(0,16).replace('T',' ')} · ${order.length}개 분류 · ${ps.length}종 · 준비 ${totalStock} / 주문 ${totalOrd}</div>
+    <table style="margin-top:16px;">
+      <thead><tr>
+        <th style="width:34px;text-align:center;">체크</th><th style="width:30px;text-align:center;">색</th><th>옵션</th>
+        <th style="text-align:right;">판매가</th><th style="text-align:right;">배송비</th><th style="text-align:right;">준비</th><th style="text-align:right;">주문</th><th style="text-align:right;">잔여</th>
+      </tr></thead>
+      <tbody>${body}</tbody>
+    </table>
+  </div>`;
   setTimeout(()=>window.print(),100);
 }
 function printAllOrders(){
