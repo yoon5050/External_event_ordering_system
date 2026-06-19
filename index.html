@@ -9,6 +9,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js" async></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <style>
   :root{
     --bg:#f6f6f4; --card:#fff; --ink:#1a1a1a; --sub:#8a8a86; --line:#ececea;
@@ -175,7 +176,7 @@
 <!-- ════════ 로그인 화면 ════════ -->
 <div id="loginView" style="display:none; text-align:center; padding:120px 20px;">
   <div class="brand" style="font-size:18px; margin-bottom:6px;">lowlit collective</div>
-  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 13</span></p>
+  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 14</span></p>
   <button class="btn btn-dark" style="padding:13px 28px;" onclick="login()">Google 계정으로 로그인</button>
   <p id="loginErr" style="color:var(--red); font-size:12.5px; margin-top:16px;"></p>
 </div>
@@ -400,6 +401,35 @@
       <textarea id="prodNotice" style="min-height:160px; font-size:12px;" onchange="saveSettings()"></textarea>
     </div>
 
+    <div class="card">
+      <h2>📧 메일 알림 <span class="hint">무료 EmailJS 사용 · 최초 1회 키 입력 필요</span></h2>
+      <div class="row">
+        <div><label class="f">받는 사람 이메일 *</label><input type="text" id="mailTo" placeholder="예: lowlitco@naver.com" onchange="saveSettings()"></div>
+        <div><label class="f">보내는 사람 표시 이름</label><input type="text" id="mailFrom" placeholder="예: LOWLIT 주문봇" onchange="saveSettings()"></div>
+      </div>
+      <div class="row">
+        <div><label class="f">EmailJS Service ID</label><input type="text" id="ejsService" onchange="saveSettings()"></div>
+        <div><label class="f">EmailJS Template ID</label><input type="text" id="ejsTemplate" onchange="saveSettings()"></div>
+        <div><label class="f">EmailJS Public Key</label><input type="text" id="ejsKey" onchange="saveSettings()"></div>
+      </div>
+      <label class="consent" style="cursor:pointer;">
+        <input type="checkbox" id="mailPerOrder" onchange="saveSettings()">
+        <span><b>주문마다 즉시 발송</b> — 주문이 접수될 때마다 주문번호·구매자·품목·금액 요약 메일을 자동 발송합니다.</span>
+      </label>
+      <div class="row" style="margin-top:8px;">
+        <div><label class="f">요약 발송 기간 — 시작일</label><input type="date" id="mailStart" onchange="saveSettings()"></div>
+        <div><label class="f">요약 발송 기간 — 종료일</label><input type="date" id="mailEnd" onchange="saveSettings()"></div>
+      </div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:6px;">
+        <button class="btn btn-line btn-sm" onclick="sendTestMail()">✉️ 테스트 메일</button>
+        <button class="btn btn-line btn-sm" onclick="sendSummaryMail('today')">📨 오늘 요약 보내기</button>
+        <button class="btn btn-dark btn-sm" onclick="sendSummaryMail('period')">📦 기간 일괄(마감) 발송</button>
+      </div>
+      <p style="font-size:11.5px;color:var(--sub);margin-top:10px;line-height:1.7;">
+        EmailJS 무료 계정(emailjs.com)에서 ① 이메일 서비스 연결 → ② 템플릿 생성(본문에 <code>{{subject}}</code>, <code>{{message}}</code> 변수, 받는사람에 <code>{{to_email}}</code>) → ③ Service ID·Template ID·Public Key를 위에 입력하세요. 무료 월 200통.
+      </p>
+    </div>
+
     <div class="grid2">
       <div class="card">
         <h2>🎪 전시 관리</h2>
@@ -504,7 +534,7 @@
   </div>
   </section>
 
-  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 13</div>
+  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 14</div>
 </div>
 </div>
 
@@ -593,7 +623,9 @@ const DEFAULT_SETTINGS={
   coEmail:'contact@lowlit.co',
   shipNote:'',
   privacyText:DEFAULT_PRIVACY,
-  prodNotice:DEFAULT_NOTICE
+  prodNotice:DEFAULT_NOTICE,
+  mailTo:'', mailFrom:'LOWLIT 주문봇', ejsService:'', ejsTemplate:'', ejsKey:'',
+  mailPerOrder:false, mailStart:'', mailEnd:''
 };
 let db={events:[], currentEventId:null, orders:[], settings:Object.assign({},DEFAULT_SETTINGS)};
 let fs=null, auth=null, configReady=false, started=false;
@@ -660,6 +692,9 @@ function saveSettings(){
   s.coName=$('coName').value; s.coWeb=$('coWeb').value; s.coAddr=$('coAddr').value;
   s.coEmail=$('coEmail').value;
   s.shipNote=$('shipNote').value; s.privacyText=$('privacyText').value; s.prodNotice=$('prodNotice').value;
+  s.mailTo=$('mailTo').value.trim(); s.mailFrom=$('mailFrom').value.trim();
+  s.ejsService=$('ejsService').value.trim(); s.ejsTemplate=$('ejsTemplate').value.trim(); s.ejsKey=$('ejsKey').value.trim();
+  s.mailPerOrder=$('mailPerOrder').checked; s.mailStart=$('mailStart').value; s.mailEnd=$('mailEnd').value;
   save();
 }
 
@@ -1130,7 +1165,7 @@ async function submitCustOrder(){
     staffMemo:$('kStaffMemo').value.trim(), memoBad:'', memoWhy:''
   };
   db.orders.unshift(order);
-  saveOrderDoc(order); renderHome();
+  saveOrderDoc(order); renderHome(); sendOrderMail(order);
   submitting=false; if(btn){ btn.disabled=false; btn.textContent='보내기'; }
   $('custForm').style.display='none';
   $('custDone').style.display='block';
@@ -1323,6 +1358,68 @@ function printOrder(id){
   $('printArea').innerHTML=orderSheetHTML(o,false);
   setTimeout(()=>window.print(),100);
 }
+
+/* ── 메일 알림 (EmailJS) ── */
+function mailReady(){
+  const s=db.settings;
+  return !!(typeof emailjs!=='undefined' && s.ejsService && s.ejsTemplate && s.ejsKey && s.mailTo);
+}
+function sendMail(subject,message){
+  const s=db.settings;
+  if(!mailReady()) return Promise.reject(new Error('메일 설정이 완료되지 않았습니다. 설정에서 EmailJS 정보와 받는 이메일을 입력해 주세요.'));
+  return emailjs.send(s.ejsService, s.ejsTemplate, {
+    to_email:s.mailTo, from_name:s.mailFrom||'주문 알림', subject, message
+  }, {publicKey:s.ejsKey});
+}
+function orderLine(o){
+  const items=o.items.map(i=>`  - ${i.name}${i.option?'('+i.option+')':''}${i.gift?'[증정]':''} ×${i.qty}`).join('\n');
+  return `■ ${o.no}  (${o.ts.slice(5,16).replace('T',' ')})\n`+
+    `구매자: ${o.customer.name} / ${o.customer.phone}\n`+
+    `주소: ${o.customer.addr}\n`+
+    (o.shipMemo?`배송메모: ${o.shipMemo}\n`:'')+
+    `결제: ${o.pay} / 결제금액: ${fmt(paid(o))}원\n`+
+    `품목:\n${items}`+
+    (o.etc?`\n  - 기타: ${o.etc}`:'');
+}
+function sendOrderMail(o){
+  if(!db.settings.mailPerOrder || !mailReady()) return;
+  const subject=`[${ev().name}] 새 주문 ${o.no} · ${o.customer.name} · ${fmt(paid(o))}원`;
+  sendMail(subject, orderLine(o)).catch(e=>console.warn('주문 메일 실패:',e.message||e));
+}
+function sendTestMail(){
+  if(!mailReady()){ alert('먼저 받는 이메일과 EmailJS 정보(Service/Template/Public Key)를 모두 입력하고 저장해 주세요.'); return; }
+  sendMail('[테스트] LOWLIT 주문관리 메일 연결 확인', '이 메일이 보이면 메일 알림이 정상 연결된 것입니다 ✅')
+    .then(()=>alert('테스트 메일을 보냈습니다. 받은편지함을 확인해 주세요 ✅'))
+    .catch(e=>alert('전송 실패: '+(e.text||e.message||e)));
+}
+function sendSummaryMail(mode){
+  if(!mailReady()){ alert('먼저 받는 이메일과 EmailJS 정보를 모두 입력하고 저장해 주세요.'); return; }
+  let start, end, label;
+  if(mode==='today'){ start=end=today(); label='오늘'; }
+  else{
+    start=db.settings.mailStart; end=db.settings.mailEnd;
+    if(!start||!end){ alert('설정에서 요약 발송 기간(시작·종료일)을 먼저 지정해 주세요.'); return; }
+    label=`${start} ~ ${end}`;
+  }
+  const list=evOrders().filter(o=>{ const d=o.ts.slice(0,10); return d>=start && d<=end; })
+    .sort((a,b)=>(a.ts||'').localeCompare(b.ts||''));
+  if(!list.length){ if(!confirm(`${label} 기간에 주문이 없습니다. 그래도 빈 요약을 보낼까요?`)) return; }
+  const sales=list.reduce((s,o)=>s+paid(o),0);
+  // 제품별 판매 수량 집계
+  const cnt={};
+  list.forEach(o=>o.items.forEach(i=>{ const k=i.name+(i.option?'('+i.option+')':'')+(i.gift?'[증정]':''); cnt[k]=(cnt[k]||0)+i.qty; }));
+  const byProd=Object.entries(cnt).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`  - ${k}: ${v}개`).join('\n')||'  (없음)';
+  const detail=list.map(orderLine).join('\n\n');
+  const subject=`[${ev().name}] 주문 요약 (${label}) · ${list.length}건 · ${fmt(sales)}원`;
+  const message=
+    `전시: ${ev().name}\n기간: ${label}\n\n`+
+    `총 주문: ${list.length}건\n총 매출: ${fmt(sales)}원\n\n`+
+    `[제품별 판매수량]\n${byProd}\n\n`+
+    `[주문 내역]\n${detail||'  (주문 없음)'}`;
+  sendMail(subject,message)
+    .then(()=>alert(`요약 메일을 보냈습니다 ✅\n${label} · ${list.length}건`))
+    .catch(e=>alert('전송 실패: '+(e.text||e.message||e)));
+}
 function printProductList(){
   const ps=ev().products;
   if(!ps.length){ alert('등록된 제품이 없습니다.'); return; }
@@ -1436,6 +1533,9 @@ function initSettings(){
   $('coName').value=s.coName; $('coWeb').value=s.coWeb; $('coAddr').value=s.coAddr;
   $('coEmail').value=s.coEmail;
   $('shipNote').value=s.shipNote||''; $('privacyText').value=s.privacyText; $('prodNotice').value=s.prodNotice||DEFAULT_NOTICE;
+  $('mailTo').value=s.mailTo||''; $('mailFrom').value=s.mailFrom||''; $('ejsService').value=s.ejsService||'';
+  $('ejsTemplate').value=s.ejsTemplate||''; $('ejsKey').value=s.ejsKey||'';
+  $('mailPerOrder').checked=!!s.mailPerOrder; $('mailStart').value=s.mailStart||''; $('mailEnd').value=s.mailEnd||'';
 }
 function renderAll(resetTab=true){
   if(!db.events.length||!ev()) return;
