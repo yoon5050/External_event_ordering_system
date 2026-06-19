@@ -176,7 +176,7 @@
 <!-- ════════ 로그인 화면 ════════ -->
 <div id="loginView" style="display:none; text-align:center; padding:120px 20px;">
   <div class="brand" style="font-size:18px; margin-bottom:6px;">lowlit collective</div>
-  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 14</span></p>
+  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 16</span></p>
   <button class="btn btn-dark" style="padding:13px 28px;" onclick="login()">Google 계정으로 로그인</button>
   <p id="loginErr" style="color:var(--red); font-size:12.5px; margin-top:16px;"></p>
 </div>
@@ -426,7 +426,7 @@
         <button class="btn btn-dark btn-sm" onclick="sendSummaryMail('period')">📦 기간 일괄(마감) 발송</button>
       </div>
       <p style="font-size:11.5px;color:var(--sub);margin-top:10px;line-height:1.7;">
-        EmailJS 무료 계정(emailjs.com)에서 ① 이메일 서비스 연결 → ② 템플릿 생성(본문에 <code>{{subject}}</code>, <code>{{message}}</code> 변수, 받는사람에 <code>{{to_email}}</code>) → ③ Service ID·Template ID·Public Key를 위에 입력하세요. 무료 월 200통.
+        EmailJS 무료 계정(emailjs.com)에서 ① 이메일 서비스 연결 → ② 템플릿: 제목 <code>{{subject}}</code> · 받는사람 <code>{{to_email}}</code> · <b>본문은 코드(HTML)편집으로 <code>{{{message}}}</code> (중괄호 3개!)</b> → ③ Service ID·Template ID·Public Key 입력. 무료 월 200통.
       </p>
     </div>
 
@@ -534,7 +534,7 @@
   </div>
   </section>
 
-  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 14</div>
+  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 16</div>
 </div>
 </div>
 
@@ -1371,24 +1371,84 @@ function sendMail(subject,message){
     to_email:s.mailTo, from_name:s.mailFrom||'주문 알림', subject, message
   }, {publicKey:s.ejsKey});
 }
-function orderLine(o){
-  const items=o.items.map(i=>`  - ${i.name}${i.option?'('+i.option+')':''}${i.gift?'[증정]':''} ×${i.qty}`).join('\n');
-  return `■ ${o.no}  (${o.ts.slice(5,16).replace('T',' ')})\n`+
-    `구매자: ${o.customer.name} / ${o.customer.phone}\n`+
-    `주소: ${o.customer.addr}\n`+
-    (o.shipMemo?`배송메모: ${o.shipMemo}\n`:'')+
-    `결제: ${o.pay} / 결제금액: ${fmt(paid(o))}원\n`+
-    `품목:\n${items}`+
-    (o.etc?`\n  - 기타: ${o.etc}`:'');
+function mailWrap(inner){
+  return `<div style="margin:0;padding:20px 10px;background:#f4f4f2;font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;">`+
+   `<div style="max-width:600px;margin:0 auto;background:#ffffff;border:1px solid #eeeeee;border-radius:12px;overflow:hidden;">`+
+    `<div style="background:#111111;padding:16px 18px;">`+
+      `<div style="font-size:15px;font-weight:bold;color:#ffffff;letter-spacing:-0.2px;">LOWLIT COLLECTIVE</div>`+
+      `<div style="font-size:11px;color:#9a9a9a;margin-top:3px;">전시 주문 알림</div>`+
+    `</div>`+
+    `<div style="padding:16px 18px;">${inner}</div>`+
+    `<div style="padding:11px 18px;border-top:1px solid #eeeeee;font-size:10.5px;color:#bbbbbb;">LOWLIT 전시 주문관리 · 자동 발송 메일</div>`+
+   `</div></div>`;
+}
+function orderBlockHtml(o){
+  const items=o.items.map(i=>`${esc(i.name)}${i.option?'('+esc(i.option)+')':''}${i.gift?' [증정]':''} ×${i.qty}`).join('<br>');
+  return `<div style="background:#fafaf8;border-radius:6px;padding:10px 12px;margin-bottom:8px;font-size:12px;color:#444444;line-height:1.65;">`+
+    `<div><span style="font-weight:bold;color:#111111;">${o.no}</span> · ${esc(o.customer.name)} · ${esc(o.customer.phone)}</div>`+
+    `<div style="color:#666666;">${esc(o.customer.addr)}</div>`+
+    (o.shipMemo?`<div style="color:#666666;">배송메모: ${esc(o.shipMemo)}</div>`:'')+
+    `<div style="margin-top:4px;">${items}</div>`+
+    (o.etc?`<div>기타: ${esc(o.etc)}</div>`:'')+
+    `<div style="margin-top:4px;">결제: ${esc(o.pay)} · <b>${fmt(paid(o))}원</b></div>`+
+  `</div>`;
+}
+function mailTitle(t){ return `<div style="font-size:13px;font-weight:bold;color:#111111;padding-bottom:9px;border-bottom:2px solid #111111;margin-bottom:12px;">${esc(t)}</div>`; }
+function mailSub(t){ return `<div style="font-size:11px;color:#888888;font-weight:bold;margin:12px 0 5px;">${esc(t)}</div>`; }
+function kv(k,v){ return `<div style="font-size:12.5px;color:#333333;line-height:1.7;"><span style="color:#999999;">${esc(k)}</span> ${v}</div>`; }
+function orderDetailHtml(o){
+  const rows=o.items.map(i=>
+    `<tr>`+
+    `<td style="padding:5px 0;border-bottom:1px solid #f0f0ee;font-size:12px;color:#222;">${esc(i.name)}${i.option?'<span style="color:#888;">('+esc(i.option)+')</span>':''}${i.gift?' <span style="color:#3a6fd8;">증정</span>':''}</td>`+
+    `<td style="padding:5px 0;border-bottom:1px solid #f0f0ee;font-size:12px;text-align:center;color:#555;">${i.qty}</td>`+
+    `<td style="padding:5px 0;border-bottom:1px solid #f0f0ee;font-size:12px;text-align:right;color:#555;">${i.gift?'0':fmt(i.price)}</td>`+
+    `<td style="padding:5px 0;border-bottom:1px solid #f0f0ee;font-size:12px;text-align:right;color:#111;font-weight:bold;">${fmt(i.price*i.qty)}</td>`+
+    `</tr>`).join('')
+    +(o.etc?`<tr><td colspan="4" style="padding:5px 0;font-size:12px;color:#555;">기타: ${esc(o.etc)}</td></tr>`:'');
+  const sumRow=(k,v,bold)=>`<tr><td style="padding:3px 0;font-size:12px;color:#888;">${esc(k)}</td><td style="padding:3px 0;font-size:${bold?'14px':'12px'};text-align:right;color:#111;${bold?'font-weight:bold;':''}">${v}</td></tr>`;
+  return mailTitle('새 주문 · '+ev().name)+
+    kv('주문번호', `<b style="color:#111;">${o.no}</b>`)+
+    kv('접수일시', o.ts.slice(0,16).replace('T',' '))+
+    mailSub('구매자')+
+    kv('이름', esc(o.customer.name))+
+    kv('연락처', esc(o.customer.phone))+
+    (o.customer.email?kv('이메일', esc(o.customer.email)):'')+
+    mailSub('배송 정보')+
+    kv('주소', esc(o.customer.addr))+
+    (o.shipMemo?kv('배송메모', esc(o.shipMemo)):'')+
+    (o.hopeDate?kv('희망배송일', o.hopeDate):'')+
+    mailSub('구매품')+
+    `<table style="width:100%;border-collapse:collapse;"><thead><tr>`+
+      `<th style="text-align:left;font-size:11px;color:#999;border-bottom:1px solid #ddd;padding:3px 0;">제품</th>`+
+      `<th style="text-align:center;font-size:11px;color:#999;border-bottom:1px solid #ddd;padding:3px 0;">수량</th>`+
+      `<th style="text-align:right;font-size:11px;color:#999;border-bottom:1px solid #ddd;padding:3px 0;">단가</th>`+
+      `<th style="text-align:right;font-size:11px;color:#999;border-bottom:1px solid #ddd;padding:3px 0;">금액</th>`+
+    `</tr></thead><tbody>${rows}</tbody></table>`+
+    mailSub('결제')+
+    `<table style="width:100%;border-collapse:collapse;"><tbody>`+
+      sumRow('합계', fmt(o.total)+'원')+
+      (o.promoDiscount?sumRow('이벤트 할인', '-'+fmt(o.promoDiscount)+'원'):'')+
+      (o.discount?sumRow('현장 할인', '-'+fmt(o.discount)+'원'):'')+
+      sumRow('배송비', o.shipFee?fmt(o.shipFee)+'원':'없음')+
+      sumRow('결제금액', fmt(paid(o))+'원', true)+
+      sumRow('결제수단', esc(o.pay))+
+    `</tbody></table>`+
+    (o.staffMemo?mailSub('담당자 메모')+`<div style="font-size:12px;color:#555;line-height:1.6;">${esc(o.staffMemo)}</div>`:'');
+}
+function metricCards(pairs){
+  return `<div style="margin-bottom:12px;">`+pairs.map(([k,v])=>
+    `<div style="display:inline-block;width:48%;background:#f4f4f2;border-radius:8px;padding:9px 11px;box-sizing:border-box;">`+
+    `<div style="font-size:11px;color:#888888;">${esc(k)}</div><div style="font-size:18px;font-weight:bold;color:#111111;margin-top:2px;">${esc(v)}</div></div>`).join(' ')+`</div>`;
 }
 function sendOrderMail(o){
   if(!db.settings.mailPerOrder || !mailReady()) return;
   const subject=`[${ev().name}] 새 주문 ${o.no} · ${o.customer.name} · ${fmt(paid(o))}원`;
-  sendMail(subject, orderLine(o)).catch(e=>console.warn('주문 메일 실패:',e.message||e));
+  sendMail(subject, mailWrap(orderDetailHtml(o))).catch(e=>console.warn('주문 메일 실패:',e.message||e));
 }
 function sendTestMail(){
   if(!mailReady()){ alert('먼저 받는 이메일과 EmailJS 정보(Service/Template/Public Key)를 모두 입력하고 저장해 주세요.'); return; }
-  sendMail('[테스트] LOWLIT 주문관리 메일 연결 확인', '이 메일이 보이면 메일 알림이 정상 연결된 것입니다 ✅')
+  const inner=mailTitle('메일 연결 테스트')+`<div style="font-size:13px;color:#333333;line-height:1.7;">이 메일이 이 디자인 그대로 보이면 메일 알림이 정상 연결된 것입니다 ✅<br><br>전시: ${esc(ev().name)}</div>`;
+  sendMail('[테스트] LOWLIT 주문관리 메일 연결 확인', mailWrap(inner))
     .then(()=>alert('테스트 메일을 보냈습니다. 받은편지함을 확인해 주세요 ✅'))
     .catch(e=>alert('전송 실패: '+(e.text||e.message||e)));
 }
@@ -1405,18 +1465,21 @@ function sendSummaryMail(mode){
     .sort((a,b)=>(a.ts||'').localeCompare(b.ts||''));
   if(!list.length){ if(!confirm(`${label} 기간에 주문이 없습니다. 그래도 빈 요약을 보낼까요?`)) return; }
   const sales=list.reduce((s,o)=>s+paid(o),0);
-  // 제품별 판매 수량 집계
   const cnt={};
   list.forEach(o=>o.items.forEach(i=>{ const k=i.name+(i.option?'('+i.option+')':'')+(i.gift?'[증정]':''); cnt[k]=(cnt[k]||0)+i.qty; }));
-  const byProd=Object.entries(cnt).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`  - ${k}: ${v}개`).join('\n')||'  (없음)';
-  const detail=list.map(orderLine).join('\n\n');
+  const prodRows=Object.entries(cnt).sort((a,b)=>b[1]-a[1]).map(([k,v])=>
+    `<tr><td style="padding:3px 0;color:#333333;">${esc(k)}</td><td style="text-align:right;font-weight:bold;color:#111111;">${v}개</td></tr>`).join('')
+    ||'<tr><td style="color:#999999;">없음</td></tr>';
   const subject=`[${ev().name}] 주문 요약 (${label}) · ${list.length}건 · ${fmt(sales)}원`;
-  const message=
-    `전시: ${ev().name}\n기간: ${label}\n\n`+
-    `총 주문: ${list.length}건\n총 매출: ${fmt(sales)}원\n\n`+
-    `[제품별 판매수량]\n${byProd}\n\n`+
-    `[주문 내역]\n${detail||'  (주문 없음)'}`;
-  sendMail(subject,message)
+  const inner=
+    mailTitle('주문 요약 · '+ev().name)+
+    `<div style="font-size:11.5px;color:#888888;margin-bottom:10px;">기간: ${esc(label)}</div>`+
+    metricCards([['총 주문',list.length+'건'],['총 매출',fmt(sales)+'원']])+
+    `<div style="font-size:11px;color:#888888;font-weight:bold;margin-bottom:4px;">제품별 판매수량</div>`+
+    `<table style="width:100%;font-size:12px;border-bottom:1px solid #eeeeee;margin-bottom:12px;"><tbody>${prodRows}</tbody></table>`+
+    `<div style="font-size:11px;color:#888888;font-weight:bold;margin-bottom:6px;">주문 내역 (${list.length}건)</div>`+
+    (list.map(orderBlockHtml).join('')||'<div style="color:#999999;font-size:12px;">주문 없음</div>');
+  sendMail(subject, mailWrap(inner))
     .then(()=>alert(`요약 메일을 보냈습니다 ✅\n${label} · ${list.length}건`))
     .catch(e=>alert('전송 실패: '+(e.text||e.message||e)));
 }
