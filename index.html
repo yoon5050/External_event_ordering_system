@@ -176,7 +176,7 @@
 <!-- ════════ 로그인 화면 ════════ -->
 <div id="loginView" style="display:none; text-align:center; padding:120px 20px;">
   <div class="brand" style="font-size:18px; margin-bottom:6px;">lowlit collective</div>
-  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 16</span></p>
+  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 17</span></p>
   <button class="btn btn-dark" style="padding:13px 28px;" onclick="login()">Google 계정으로 로그인</button>
   <p id="loginErr" style="color:var(--red); font-size:12.5px; margin-top:16px;"></p>
 </div>
@@ -203,6 +203,7 @@
     <button data-tab="stock" onclick="showTab('stock')">🗃️ 재고현황</button>
     <button data-tab="prod" onclick="showTab('prod')">📋 제품관리</button>
     <button data-tab="sim" onclick="showTab('sim')">🧪 시뮬레이션</button>
+    <button data-tab="card" onclick="showTab('card')">📇 명함</button>
     <button data-tab="set" onclick="showTab('set')">⚙️ 설정</button>
   </nav>
 
@@ -459,11 +460,39 @@
     <p style="font-size:11.5px; color:var(--sub); text-align:right; padding:4px 6px;"><a href="https://simulationand.netlify.app/" target="_blank" style="color:var(--sub);">새 창에서 열기 ↗</a></p>
   </section>
 
+  <!-- ── 명함첩 ── -->
+  <section id="tab-card" style="display:none;">
+    <div class="card">
+      <h2>📇 명함 빠른 등록 <span class="hint" id="cardEvName"></span></h2>
+      <p style="font-size:12.5px;color:#666;margin-bottom:12px;">현장에서 받은 명함을 바로 촬영해 올리세요. 사진은 자동 압축되어 모든 기기에 공유됩니다.</p>
+      <div class="row" style="align-items:flex-end;">
+        <div style="flex:2;"><label class="f">이름·메모 (선택)</label><input type="text" id="cardMemo" placeholder="예: OO디자인 김OO 대표 / 협업 문의"></div>
+        <div style="flex:0 0 auto;">
+          <input type="file" id="cardFile" accept="image/*" capture="environment" style="display:none;" onchange="uploadCard(this)">
+          <button class="btn btn-dark btn-sm" onclick="document.getElementById('cardFile').click()">📷 명함 촬영·업로드</button>
+        </div>
+      </div>
+      <div id="cardUploadStatus" style="font-size:12px;color:var(--sub);margin-top:8px;"></div>
+    </div>
+    <div class="card">
+      <h2>🗂️ 등록된 명함 <span class="hint" id="cardCount"></span></h2>
+      <div id="cardGallery" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;"></div>
+      <div class="empty" id="cardEmpty" style="display:none;">아직 등록된 명함이 없습니다.</div>
+    </div>
+  </section>
+
   <!-- ── 고객 작성 탭 ── -->
   <section id="tab-cust" style="display:none;">
   <div class="card cwrap" style="max-width:700px; margin:0 auto;">
     <div id="custForm">
       <h1 id="custTitle">전시명 - 구매자 정보 기입</h1>
+
+      <div class="cf"><label>판매 담당자 <span class="req">*</span></label>
+        <select id="kRep">
+          <option value="">담당자 선택</option>
+          <option>재식</option><option>윤이</option><option>다움</option><option>윤지</option><option>양호</option><option>순호</option>
+        </select>
+      </div>
 
       <div class="cf"><label>이름 <span class="req">*</span></label><input type="text" id="kName" autocomplete="off"></div>
       <div class="cf"><label>연락처 <span class="req">*</span></label><input type="tel" id="kPhone" placeholder="010-0000-0000" autocomplete="off"></div>
@@ -481,6 +510,9 @@
       </div>
       <div class="cf"><label>희망 배송일</label><input type="date" id="kHopeDate"></div>
       <div class="cf"><label>배송 메모</label><input type="text" id="kShipMemo" placeholder="택배기사님께 전달할 메시지 (예: 부재 시 문 앞에 놓아주세요)" autocomplete="off"></div>
+      <div class="cf"><label>배송 관련 안내 <span style="font-weight:400;color:var(--sub);font-size:12px;">(주문서에 인쇄 · 기본 안내가 자동 입력되며 이 주문만 수정 가능)</span></label>
+        <textarea id="kShipNotice" style="min-height:54px;"></textarea>
+      </div>
 
       <div class="cf"><label>구매품 <span class="req">*</span></label>
         <div id="kPromoBanner"></div>
@@ -534,7 +566,7 @@
   </div>
   </section>
 
-  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 16</div>
+  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 17</div>
 </div>
 </div>
 
@@ -616,18 +648,19 @@ const firebaseConfig={
 };
 const ALLOWED_DOMAIN='lowlit.co';
 
+const DEFAULT_SHIPNOTE='전시 종료 후 영업일 5~7일 내 순차 발송됩니다. (배송 일정은 변동될 수 있습니다.)';
 const DEFAULT_SETTINGS={
   coName:'LOWLIT COLLECTIVE : 로우리트콜렉티브',
   coWeb:'lowlit.co',
   coAddr:'서울 동작구 상도로55길 6 (상도동) 404-1',
   coEmail:'contact@lowlit.co',
-  shipNote:'',
+  shipNote:DEFAULT_SHIPNOTE,
   privacyText:DEFAULT_PRIVACY,
   prodNotice:DEFAULT_NOTICE,
   mailTo:'', mailFrom:'LOWLIT 주문봇', ejsService:'', ejsTemplate:'', ejsKey:'',
   mailPerOrder:false, mailStart:'', mailEnd:''
 };
-let db={events:[], currentEventId:null, orders:[], settings:Object.assign({},DEFAULT_SETTINGS)};
+let db={events:[], currentEventId:null, orders:[], cards:[], settings:Object.assign({},DEFAULT_SETTINGS)};
 let fs=null, auth=null, configReady=false, started=false;
 
 function clean(x){ return JSON.parse(JSON.stringify(x)); } // undefined 제거 + 순수 객체화
@@ -682,6 +715,10 @@ function startApp(u){
     db.orders=snap.docs.map(d=>d.data()).sort((a,b)=>(b.ts||'').localeCompare(a.ts||''));
     if(configReady) renderAll();
   },e=>alert('주문 데이터 오류: '+e.message));
+  fs.collection('cards').onSnapshot(snap=>{
+    db.cards=snap.docs.map(d=>d.data()).sort((a,b)=>(b.ts||'').localeCompare(a.ts||''));
+    if(configReady) renderCards();
+  },e=>console.warn('명함 데이터 오류:',e.message));
 }
 
 function ev(){ return db.events.find(e=>e.id===db.currentEventId)||db.events[0]; }
@@ -741,12 +778,13 @@ function renameEvent(id){
 
 /* ── 탭 ── */
 function showTab(t){
-  ['home','cust','list','stock','prod','sim','set'].forEach(k=>{
+  ['home','cust','list','stock','prod','card','sim','set'].forEach(k=>{
     $('tab-'+k).style.display=k===t?'':'none';
     document.querySelector(`nav.tabs button[data-tab="${k}"]`).classList.toggle('on',k===t);
   });
   if(t==='sim'){ const f=$('simFrame'); if(!f.src) f.src=f.dataset.src; return; }
   if(t==='cust') prepCustTab();
+  else if(t==='card') renderCards();
   else renderAll(false);
 }
 
@@ -1006,6 +1044,8 @@ function prepCustTab(){
   $('custForm').style.display='';
   $('custDone').style.display='none';
   $('custTitle').textContent=ev().name+' - 구매자 정보 기입';
+  $('kRep').value='';
+  $('kShipNotice').value=db.settings.shipNote||DEFAULT_SHIPNOTE;
   $('kPrivacyBox').textContent=db.settings.privacyText;
   $('kNoticeBox').textContent=db.settings.prodNotice||DEFAULT_NOTICE;
   const act=promos().filter(p=>p.active);
@@ -1108,6 +1148,7 @@ function resetCustForm(){
   closePostcode();
   $('kEtcChk').checked=false; $('kConsent').checked=false; $('kNoticeChk').checked=false;
   document.querySelectorAll('input[name="kPay"]').forEach(r=>r.checked=false);
+  $('kRep').value=''; $('kShipNotice').value=db.settings.shipNote||DEFAULT_SHIPNOTE;
   renderCustProducts();
 }
 let submitting=false;
@@ -1117,6 +1158,8 @@ async function submitCustOrder(){
   const zip=$('kZip').value.trim();
   const addr=(($('kAddr').value.trim()+' '+$('kAddr2').value.trim()).trim()+(zip?' (우편번호 : '+zip+')':'')).trim();
   if(!name||!phone||!$('kAddr').value.trim()){ alert('이름, 연락처, 주소는 필수입니다.'); return; }
+  const rep=$('kRep').value;
+  if(!rep){ alert('판매 담당자를 선택해 주세요.'); return; }
   const items=collectItems();
   const etc=$('kEtcChk').checked?$('kEtc').value.trim():'';
   if(!items.length&&!etc){ alert('구매품을 선택해 주세요.'); return; }
@@ -1162,6 +1205,7 @@ async function submitCustOrder(){
     shipFee:orderShip,
     customer:{name,phone,email:$('kEmail').value.trim(),addr},
     hopeDate:$('kHopeDate').value, shipMemo:$('kShipMemo').value.trim(), pay, ship:'상품준비', consent:true, noticeAgree:true,
+    rep, shipNotice:$('kShipNotice').value.trim(),
     staffMemo:$('kStaffMemo').value.trim(), memoBad:'', memoWhy:''
   };
   db.orders.unshift(order);
@@ -1190,7 +1234,7 @@ function renderOrders(){
     tb.insertAdjacentHTML('beforeend',`<tr>
       <td><b>${o.no}</b></td>
       <td style="white-space:nowrap;">${o.ts.slice(5,10)} ${o.ts.slice(11,16)}</td>
-      <td><b>${esc(o.customer.name)}</b><br><span style="color:var(--sub);font-size:11.5px;">${esc(o.customer.phone)}</span></td>
+      <td><b>${esc(o.customer.name)}</b><br><span style="color:var(--sub);font-size:11.5px;">${esc(o.customer.phone)}</span>${o.rep?'<br><span style="color:var(--sub);font-size:11px;">🧑‍💼 '+esc(o.rep)+'</span>':''}</td>
       <td style="max-width:230px;">${items}</td>
       <td class="num"><b>${fmt(paid(o))}원</b>${o.discount?`<br><span style="font-size:11px;color:var(--red);">할인 -${fmt(o.discount)}</span>`:''}</td>
       <td><span class="pill p-green">${esc(o.pay)}</span></td>
@@ -1216,7 +1260,7 @@ function openDetail(id){
     <p style="font-size:13px;line-height:1.9;">
       <b>${esc(o.customer.name)}</b> · ${esc(o.customer.phone)}${o.customer.email?' · '+esc(o.customer.email):''}<br>
       📦 ${esc(o.customer.addr)}${o.shipMemo?'<br>🚪 배송 메모: '+esc(o.shipMemo):''}<br>
-      💳 ${esc(o.pay)} · 🚚 ${o.ship}${o.hopeDate?' · 희망배송일 '+o.hopeDate:''} · 🕐 ${o.ts.slice(0,16).replace('T',' ')}
+      🧑‍💼 ${esc(o.rep)||'-'} · 💳 ${esc(o.pay)} · 🚚 ${o.ship}${o.hopeDate?' · 희망배송일 '+o.hopeDate:''} · 🕐 ${o.ts.slice(0,16).replace('T',' ')}
     </p>
     <table style="margin:12px 0;"><thead><tr><th>제품</th><th>옵션</th><th class="num">단가</th><th class="num">수량</th><th class="num">금액</th></tr></thead>
     <tbody>${rows}
@@ -1309,8 +1353,9 @@ function orderSheetHTML(o,pageBreak){
       <div><b>주문번호</b><span>${o.no}</span></div>
       <div><b>주문일자</b><span>${o.ts.slice(0,19).replace('T',' ')}</span></div>
       <div><b>결제수단</b><span>${esc(o.pay)}</span></div>
+      <div><b>판매 담당자</b><span>${esc(o.rep)||'-'}</span></div>
       ${(o.promoNames&&o.promoNames.length)?`<div><b>적용 이벤트</b><span>${esc(o.promoNames.join(', '))}</span></div>`:''}
-      <div><b>배송관련 안내</b><span>${esc(s.shipNote)}</span></div>
+      <div><b>배송관련 안내</b><span>${esc(o.shipNotice||s.shipNote||DEFAULT_SHIPNOTE)}</span></div>
     </div>
 
     <div class="ps-cols">
@@ -1409,6 +1454,7 @@ function orderDetailHtml(o){
   return mailTitle('새 주문 · '+ev().name)+
     kv('주문번호', `<b style="color:#111;">${o.no}</b>`)+
     kv('접수일시', o.ts.slice(0,16).replace('T',' '))+
+    kv('판매 담당자', esc(o.rep)||'-')+
     mailSub('구매자')+
     kv('이름', esc(o.customer.name))+
     kv('연락처', esc(o.customer.phone))+
@@ -1533,11 +1579,69 @@ function printAllOrders(){
   setTimeout(()=>window.print(),150);
 }
 
+/* ── 명함첩 ── */
+function cardsList(){ return db.cards.filter(c=>c.eventId===db.currentEventId); }
+function uploadCard(input){
+  const f=input.files[0]; if(!f) return;
+  if(!fs){ alert('서버 연결을 확인해 주세요.'); input.value=''; return; }
+  const status=$('cardUploadStatus'); status.textContent='업로드 중...';
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const img=new Image();
+    img.onload=()=>{
+      const max=1200; let w=img.width, h=img.height;
+      if(w>h){ if(w>max){ h=Math.round(h*max/w); w=max; } }
+      else { if(h>max){ w=Math.round(w*max/h); h=max; } }
+      const cv=document.createElement('canvas'); cv.width=w; cv.height=h;
+      cv.getContext('2d').drawImage(img,0,0,w,h);
+      let q=0.7, dataUrl=cv.toDataURL('image/jpeg',q);
+      while(dataUrl.length>900000 && q>0.3){ q-=0.1; dataUrl=cv.toDataURL('image/jpeg',q); }
+      const card={id:'c'+Date.now()+Math.random().toString(36).slice(2,5), eventId:db.currentEventId, ts:nowLocal(), memo:$('cardMemo').value.trim(), img:dataUrl};
+      fs.collection('cards').doc(card.id).set(clean(card))
+        .then(()=>{ status.textContent='✅ 업로드 완료'; $('cardMemo').value=''; setTimeout(()=>status.textContent='',2500); })
+        .catch(err=>{ status.textContent=''; alert('명함 저장 실패: '+err.message); });
+      input.value='';
+    };
+    img.onerror=()=>{ status.textContent=''; alert('이미지를 읽을 수 없습니다.'); input.value=''; };
+    img.src=e.target.result;
+  };
+  reader.readAsDataURL(f);
+}
+function renderCards(){
+  if(!db.events.length||!ev()) return;
+  if(!$('cardGallery')) return;
+  $('cardEvName').textContent='· '+ev().name;
+  const list=cardsList();
+  $('cardCount').textContent=list.length?list.length+'장':'';
+  const g=$('cardGallery'); g.innerHTML='';
+  $('cardEmpty').style.display=list.length?'none':'';
+  list.forEach(c=>{
+    const fn='명함_'+c.ts.slice(0,10)+'.jpg';
+    g.insertAdjacentHTML('beforeend',`<div style="border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff;">
+      <a href="${c.img}" download="${fn}" target="_blank"><img src="${c.img}" style="width:100%;height:130px;object-fit:cover;display:block;background:#f4f4f2;"></a>
+      <div style="padding:8px 10px;">
+        <div style="font-size:12px;color:#333;min-height:16px;line-height:1.4;">${esc(c.memo)||'<span style="color:#bbb;">메모 없음</span>'}</div>
+        <div style="font-size:10.5px;color:var(--sub);margin-top:3px;">${c.ts.slice(0,16).replace('T',' ')}</div>
+        <div style="display:flex;gap:6px;margin-top:7px;">
+          <a class="btn btn-line btn-sm" href="${c.img}" download="${fn}" style="text-decoration:none;">⬇️ 저장</a>
+          <button class="btn btn-red btn-sm" onclick="delCard('${c.id}')">삭제</button>
+        </div>
+      </div>
+    </div>`);
+  });
+}
+function delCard(id){
+  if(!confirm('이 명함을 삭제할까요?')) return;
+  db.cards=db.cards.filter(c=>c.id!==id);
+  if(fs) fs.collection('cards').doc(id).delete().catch(e=>alert('삭제 실패: '+e.message));
+  renderCards();
+}
+
 /* ── 엑셀 내보내기 ── */
 function exportXlsx(){
-  const oRows=[['전시','주문번호','접수일시','구매자','연락처','이메일','배송주소','희망배송일','배송메모','제품명','옵션','단가','수량','금액','기타구매품','주문합계','이벤트할인','이벤트명','할인','배송비','결제금액','결제수단','발송상태','담당자메모','아쉬운점','구매결정요인']];
+  const oRows=[['전시','주문번호','접수일시','판매담당자','구매자','연락처','이메일','배송주소','희망배송일','배송메모','제품명','옵션','단가','수량','금액','기타구매품','주문합계','이벤트할인','이벤트명','할인','배송비','결제금액','결제수단','발송상태','담당자메모','아쉬운점','구매결정요인']];
   evOrders().slice().reverse().forEach(o=>{
-    const base=[ev().name,o.no,o.ts.slice(0,16).replace('T',' '),o.customer.name,o.customer.phone,o.customer.email,o.customer.addr,o.hopeDate,o.shipMemo||''];
+    const base=[ev().name,o.no,o.ts.slice(0,16).replace('T',' '),o.rep||'',o.customer.name,o.customer.phone,o.customer.email,o.customer.addr,o.hopeDate,o.shipMemo||''];
     if(o.items.length) o.items.forEach((i,n)=>{
       oRows.push([...base, i.name+(i.gift?' (증정)':''), i.option, i.price, i.qty, i.price*i.qty,
         n===0?o.etc:'', n===0?o.total:'', n===0?(o.promoDiscount||0):'', n===0?((o.promoNames||[]).join(', ')):'', n===0?(o.discount||0):'', n===0?(o.shipFee||0):'', n===0?paid(o):'', o.pay, o.ship,
