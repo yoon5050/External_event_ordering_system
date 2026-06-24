@@ -654,6 +654,7 @@ const firebaseConfig={
 };
 const ALLOWED_DOMAIN='lowlit.co';
 
+const LOWLIT_QR='data:image/png;base64,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';
 const DEFAULT_SHIPNOTE='전시 종료 후 영업일 5~7일 내 순차 발송됩니다. (배송 일정은 변동될 수 있습니다.)';
 const DEFAULT_SETTINGS={
   coName:'LOWLIT COLLECTIVE : 로우리트콜렉티브',
@@ -686,6 +687,16 @@ function saveOrderDoc(o){
 function deleteOrderDoc(id){ if(fs) fs.collection('orders').doc(id).delete().catch(e=>alert('삭제 실패: '+e.message)); }
 
 function boot(){
+  // 외부 라이브러리(Firebase)가 로드되지 않은 경우 (인터넷 차단된 미리보기 환경 등)
+  if(typeof firebase==='undefined'){
+    boot._tries=(boot._tries||0)+1;
+    if(boot._tries<40){ setTimeout(boot,150); return; }
+    const sv=$('setupView');
+    if(sv){ sv.style.display='block';
+      sv.innerHTML='<div class="card"><h2>🌐 라이브러리 로딩 실패</h2><p style="font-size:13.5px;line-height:1.9;color:#444;">Firebase 라이브러리를 불러오지 못했습니다. 보통 <b>인터넷이 차단된 미리보기 환경</b>에서 나타나는 안내이며, 코드 오류가 아닙니다.<br><br>실제 배포 주소(예: Vercel)나 인터넷이 되는 브라우저에서 열면 정상 작동합니다.</p></div>';
+    }
+    return;
+  }
   if(!firebaseConfig.projectId||String(firebaseConfig.apiKey).includes('PASTE')){
     $('setupView').style.display='block'; return;
   }
@@ -1354,14 +1365,21 @@ function orderSheetHTML(o,pageBreak){
     <td class="num">${i.qty}</td><td class="num">${i.gift?'0 KRW':(i.listPrice>i.price?`<s style="color:#999;">${fmt(i.listPrice)}</s><br>`:'')+fmt(i.price)+' KRW'}</td><td class="num">${fmt(i.price*i.qty)} KRW</td></tr>`).join('')
     +(o.etc?`<tr><td colspan="6">기타: ${esc(o.etc)}</td></tr>`:'');
   return `<div class="ps"${pageBreak?' style="page-break-before:always;"':''}>
-    <div class="ps-co">${esc(s.coName)}</div>
-    <div class="ps-web">${esc(s.coWeb)}</div>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;">
+      <div>
+        <div class="ps-co">${esc(s.coName)}</div>
+        <div class="ps-web">${esc(s.coWeb)}</div>
+      </div>
+      <div style="text-align:center;flex-shrink:0;">
+        <img src="${LOWLIT_QR}" alt="LOWLIT 챗봇 상담" style="width:84px;height:84px;display:block;image-rendering:pixelated;">
+        <div style="font-size:9px;color:#333;margin-top:3px;line-height:1.3;">챗봇 상담</div>
+      </div>
+    </div>
 
     <div class="ps-meta">
       <div><b>주문번호</b><span>${o.no}</span></div>
       <div><b>주문일자</b><span>${o.ts.slice(0,19).replace('T',' ')}</span></div>
       <div><b>결제수단</b><span>${esc(o.pay)}</span></div>
-      <div><b>판매 담당자</b><span>${esc(o.rep)||'-'}</span></div>
       ${(o.promoNames&&o.promoNames.length)?`<div><b>적용 이벤트</b><span>${esc(o.promoNames.join(', '))}</span></div>`:''}
       <div><b>배송관련 안내</b><span>${esc(o.shipNotice||s.shipNote||DEFAULT_SHIPNOTE)}</span></div>
     </div>
@@ -1401,7 +1419,6 @@ function orderSheetHTML(o,pageBreak){
 
     <div class="ps-foot">
       <b>${esc(s.coName)}</b><br>
-      ${esc(s.coAddr)}<br>
       ${esc(s.coEmail)}
     </div>
   </div>`;
