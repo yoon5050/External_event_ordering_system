@@ -403,6 +403,12 @@
     </div>
 
     <div class="card">
+      <h2>📁 명함 구글 드라이브 업로드 <span class="hint">명함 탭에서 올린 사진을 드라이브에도 자동 저장 · 전시 이름 폴더로 자동 정리</span></h2>
+      <div class="row"><div><label class="f">Apps Script 웹앱 URL</label><input type="text" id="driveScriptUrl" placeholder="https://script.google.com/macros/s/.../exec" onchange="saveSettings()"></div></div>
+      <p style="font-size:11.5px;color:var(--sub);margin-top:8px;line-height:1.7;">비워두면 명함은 이 앱(명함 탭)에만 저장됩니다. URL을 입력하면 명함 촬영 시 구글 드라이브의 <b>전시 이름 폴더</b>에 사진이 자동 업로드됩니다. (설정 방법은 별도 안내 참고)</p>
+    </div>
+
+    <div class="card">
       <h2>📧 메일 알림 <span class="hint">무료 EmailJS 사용 · 최초 1회 키 입력 필요</span></h2>
       <div class="row">
         <div><label class="f">받는 사람 이메일 *</label><input type="text" id="mailTo" placeholder="예: lowlitco@naver.com" onchange="saveSettings()"></div>
@@ -658,7 +664,8 @@ const DEFAULT_SETTINGS={
   privacyText:DEFAULT_PRIVACY,
   prodNotice:DEFAULT_NOTICE,
   mailTo:'', mailFrom:'LOWLIT 주문봇', ejsService:'', ejsTemplate:'', ejsKey:'',
-  mailPerOrder:false, mailStart:'', mailEnd:''
+  mailPerOrder:false, mailStart:'', mailEnd:'',
+  driveScriptUrl:''
 };
 let db={events:[], currentEventId:null, orders:[], cards:[], settings:Object.assign({},DEFAULT_SETTINGS)};
 let fs=null, auth=null, configReady=false, started=false;
@@ -732,6 +739,7 @@ function saveSettings(){
   s.mailTo=$('mailTo').value.trim(); s.mailFrom=$('mailFrom').value.trim();
   s.ejsService=$('ejsService').value.trim(); s.ejsTemplate=$('ejsTemplate').value.trim(); s.ejsKey=$('ejsKey').value.trim();
   s.mailPerOrder=$('mailPerOrder').checked; s.mailStart=$('mailStart').value; s.mailEnd=$('mailEnd').value;
+  s.driveScriptUrl=$('driveScriptUrl').value.trim();
   save();
 }
 
@@ -1581,6 +1589,17 @@ function printAllOrders(){
 
 /* ── 명함첩 ── */
 function cardsList(){ return db.cards.filter(c=>c.eventId===db.currentEventId); }
+function uploadToDrive(card){
+  const url=db.settings.driveScriptUrl;
+  if(!url) return;
+  try{
+    const b64=(card.img||'').split(',')[1]||'';
+    const memoPart=card.memo?('_'+card.memo.replace(/[\\/:*?"<>|]/g,' ').slice(0,30)):'';
+    const payload={ eventName:ev().name, fileName:'명함_'+card.ts.slice(0,16).replace(/[:T-]/g,'')+memoPart+'.jpg', mimeType:'image/jpeg', dataBase64:b64, memo:card.memo||'', ts:card.ts };
+    fetch(url,{ method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify(payload) })
+      .catch(e=>console.warn('드라이브 업로드 실패:',e));
+  }catch(e){ console.warn('드라이브 업로드 오류:',e); }
+}
 function uploadCard(input){
   const f=input.files[0]; if(!f) return;
   if(!fs){ alert('서버 연결을 확인해 주세요.'); input.value=''; return; }
@@ -1598,7 +1617,7 @@ function uploadCard(input){
       while(dataUrl.length>900000 && q>0.3){ q-=0.1; dataUrl=cv.toDataURL('image/jpeg',q); }
       const card={id:'c'+Date.now()+Math.random().toString(36).slice(2,5), eventId:db.currentEventId, ts:nowLocal(), memo:$('cardMemo').value.trim(), img:dataUrl};
       fs.collection('cards').doc(card.id).set(clean(card))
-        .then(()=>{ status.textContent='✅ 업로드 완료'; $('cardMemo').value=''; setTimeout(()=>status.textContent='',2500); })
+        .then(()=>{ uploadToDrive(card); status.textContent='✅ 업로드 완료'+(db.settings.driveScriptUrl?' · 드라이브 동기화됨':''); $('cardMemo').value=''; setTimeout(()=>status.textContent='',2800); })
         .catch(err=>{ status.textContent=''; alert('명함 저장 실패: '+err.message); });
       input.value='';
     };
@@ -1703,6 +1722,7 @@ function initSettings(){
   $('mailTo').value=s.mailTo||''; $('mailFrom').value=s.mailFrom||''; $('ejsService').value=s.ejsService||'';
   $('ejsTemplate').value=s.ejsTemplate||''; $('ejsKey').value=s.ejsKey||'';
   $('mailPerOrder').checked=!!s.mailPerOrder; $('mailStart').value=s.mailStart||''; $('mailEnd').value=s.mailEnd||'';
+  $('driveScriptUrl').value=s.driveScriptUrl||'';
 }
 function renderAll(resetTab=true){
   if(!db.events.length||!ev()) return;
