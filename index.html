@@ -176,7 +176,7 @@
 <!-- ════════ 로그인 화면 ════════ -->
 <div id="loginView" style="display:none; text-align:center; padding:120px 20px;">
   <div class="brand" style="font-size:18px; margin-bottom:6px;">lowlit collective</div>
-  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 22</span></p>
+  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 24</span></p>
   <button class="btn btn-dark" style="padding:13px 28px;" onclick="login()">Google 계정으로 로그인</button>
   <p id="loginErr" style="color:var(--red); font-size:12.5px; margin-top:16px;"></p>
 </div>
@@ -360,6 +360,7 @@
         <div><label class="f" id="prNLabel">N (기준 수량)</label><input type="number" id="prN" min="1" value="3"></div>
         <div id="prMWrap"><label class="f" id="prMLabel">M (무료 수량)</label><input type="number" id="prM" min="1" value="1"></div>
         <div id="prXWrap" style="display:none;"><label class="f" id="prXLabel">할인액 (원)</label><input type="number" id="prX" min="0"></div>
+        <div id="prGiftWrap" style="display:none;flex:1.5;"><label class="f">증정품 (자동 지급)</label><select id="prGift"></select></div>
         <div style="flex:1.5;"><label class="f">대상 제품</label><select id="prPid"><option value="">전체 제품 합산</option></select></div>
       </div>
       <button class="btn btn-dark btn-sm" onclick="addPromo()">이벤트 추가</button>
@@ -574,7 +575,7 @@
   </div>
   </section>
 
-  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 22</div>
+  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 24</div>
 </div>
 </div>
 
@@ -934,6 +935,7 @@ function prTypeUI(){
   $('prXLabel').textContent=t==='pct'?'할인율 (%)':'할인액 (원)';
   $('prNLabel').textContent=t==='amtgift'?'기준 금액 (원)':'N (기준 수량)';
   $('prMLabel').textContent=t==='amtgift'?'증정 수량 (개)':'M (무료 수량)';
+  $('prGiftWrap').style.display=t==='amtgift'?'':'none';
 }
 function addPromo(){
   const name=$('prName').value.trim(), type=$('prType').value;
@@ -941,7 +943,8 @@ function addPromo(){
   if(!name){ alert('이벤트명을 입력해 주세요.'); return; }
   if((type==='amt'||type==='pct')&&!x){ alert('할인값을 입력해 주세요.'); return; }
   if(type==='pct'&&x>100){ alert('할인율은 100% 이하로 입력해 주세요.'); return; }
-  promos().push({id:'pr'+Date.now(), name, type, n, m, x, pid:$('prPid').value, active:true});
+  if(type==='amtgift'&&!$('prGift').value){ alert('자동 지급할 증정품을 선택해 주세요.'); return; }
+  promos().push({id:'pr'+Date.now(), name, type, n, m, x, pid:$('prPid').value, giftPid:(type==='amtgift'?$('prGift').value:''), active:true});
   $('prName').value=''; $('prX').value='';
   save(); renderPromos(); renderHome();
 }
@@ -955,7 +958,7 @@ function promoTarget(p){
 }
 function promoDesc(p){
   if(p.type==='nm') return `${p.n}개 구매 시 ${p.m}개 증정 (증정품 선택)`;
-  if(p.type==='amtgift') return `${fmt(p.n)}원 이상 구매 시 ${p.m}개 증정 (증정품 선택)`;
+  if(p.type==='amtgift'){ const gp=ev().products.find(x=>x.id===p.giftPid); return `${fmt(p.n)}원 이상 구매 시 ${gp?esc(gp.name)+(gp.option?'('+esc(gp.option)+')':''):'증정품'} ${p.m}개 자동 증정`; }
   if(p.type==='amt') return `${p.n}개 이상 구매 시 ${fmt(p.x)}원 할인`;
   return `${p.n}개 이상 구매 시 ${p.x}% 할인`;
 }
@@ -971,6 +974,7 @@ function promoPrice(p){
 }
 function renderPromos(){
   $('prPid').innerHTML='<option value="">전체 제품 합산</option>'+[...new Set(ev().products.map(p=>p.name))].map(n=>`<option value="g:${esc(n)}">[그룹] ${esc(n)} (전체 옵션 합산)</option>`).join('')+ev().products.map(p=>`<option value="${p.id}">${esc(p.name)}${p.option?' · '+esc(p.option):''}</option>`).join('');
+  $('prGift').innerHTML=ev().products.map(p=>`<option value="${p.id}">${esc(p.name)}${p.option?' · '+esc(p.option):''}</option>`).join('');
   const tb=$('promoRows'); tb.innerHTML='';
   $('promoEmpty').style.display=promos().length?'none':'';
   promos().forEach(p=>{
@@ -994,7 +998,7 @@ function computePromo(items){
       if(cnt>0){ gifts.push({id:p.id,name:p.name,count:cnt}); names.push(p.name); }
     }else if(p.type==='amtgift'){
       const scopeTotal=scope.reduce((s,i)=>s+i.price*i.qty,0);
-      if(scopeTotal>=p.n){ gifts.push({id:p.id,name:p.name,count:p.m}); names.push(p.name); }
+      if(scopeTotal>=p.n){ gifts.push({id:p.id,name:p.name,count:p.m,fixedPid:p.giftPid||''}); names.push(p.name); }
     }else{
       let d=0;
       if(p.type==='amt'){ if(qty>=p.n) d=p.x; }
@@ -1164,18 +1168,26 @@ function collectItems(){
 }
 let giftSig='';
 function renderGiftSelects(gifts){
-  const sig=JSON.stringify(gifts.map(g=>[g.id,g.count]));
+  const sig=JSON.stringify(gifts.map(g=>[g.id,g.count,g.fixedPid||'']));
   if(sig===giftSig) return;
   giftSig=sig;
   const box=$('kGifts'); box.innerHTML='';
   const opts=ev().products.filter(p=>p.visible!==false).map(p=>`<option value="${p.id}">${esc(p.name)}${p.option?' ('+esc(p.option)+')':''}</option>`).join('');
   gifts.forEach(g=>{
-    for(let i=0;i<g.count;i++){
-      box.insertAdjacentHTML('beforeend',`<div class="opt-row" style="background:#eef3ff;border-radius:6px;padding:9px 11px;margin-top:6px;">
-        <span style="font-weight:700;">🎁 ${esc(g.name)} 증정품</span>
-        <select class="gift-sel free" data-promo="${esc(g.name)}" style="margin-left:auto;flex:1;max-width:280px;">
-          <option value="">증정품 선택 (제품/색상)</option>${opts}
-        </select></div>`);
+    if(g.fixedPid){
+      const gp=ev().products.find(p=>p.id===g.fixedPid);
+      const gname=gp?esc(gp.name)+(gp.option?' ('+esc(gp.option)+')':''):'(삭제된 제품)';
+      box.insertAdjacentHTML('beforeend',`<div class="opt-row gift-fixed" data-promo="${esc(g.name)}" data-pid="${g.fixedPid}" data-count="${g.count}" style="background:#eef3ff;border-radius:6px;padding:9px 11px;margin-top:6px;">
+        <span style="font-weight:700;">🎁 ${esc(g.name)}</span>
+        <span style="margin-left:auto;">증정품: <b>${gname}</b> ×${g.count} <span style="color:var(--sub);">(자동 증정)</span></span></div>`);
+    }else{
+      for(let i=0;i<g.count;i++){
+        box.insertAdjacentHTML('beforeend',`<div class="opt-row" style="background:#eef3ff;border-radius:6px;padding:9px 11px;margin-top:6px;">
+          <span style="font-weight:700;">🎁 ${esc(g.name)} 증정품</span>
+          <select class="gift-sel free" data-promo="${esc(g.name)}" style="margin-left:auto;flex:1;max-width:280px;">
+            <option value="">증정품 선택 (제품/색상)</option>${opts}
+          </select></div>`);
+      }
     }
   });
 }
@@ -1232,6 +1244,10 @@ async function submitCustOrder(){
   const giftItems=giftSels.map(s=>{
     const p=ev().products.find(x=>x.id===s.value);
     return {pid:p.id,name:p.name,option:p.option,price:0,qty:1,gift:true,promo:s.dataset.promo};
+  });
+  document.querySelectorAll('#kGifts .gift-fixed').forEach(d=>{
+    const p=ev().products.find(x=>x.id===d.dataset.pid);
+    if(p){ const cnt=Math.max(1,+d.dataset.count||1); for(let i=0;i<cnt;i++) giftItems.push({pid:p.id,name:p.name,option:p.option,price:0,qty:1,gift:true,promo:d.dataset.promo}); }
   });
   const orderShip=items.reduce((s,i)=>s+(i.ship||0)*i.qty,0);
 
@@ -1693,10 +1709,11 @@ function renderCards(){
     g.insertAdjacentHTML('beforeend',`<div style="border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff;">
       <a href="${c.img}" download="${fn}" target="_blank"><img src="${c.img}" style="width:100%;height:130px;object-fit:cover;display:block;background:#f4f4f2;"></a>
       <div style="padding:8px 10px;">
-        <div style="font-size:12px;color:#333;min-height:16px;line-height:1.4;">${esc(c.memo)||'<span style="color:#bbb;">메모 없음</span>'}</div>
-        <div style="font-size:10.5px;color:var(--sub);margin-top:3px;">${c.ts.slice(0,16).replace('T',' ')}</div>
+        <input type="text" id="cardmemo_${c.id}" value="${esc(c.memo)}" placeholder="메모 입력 (이름·회사·용건 등)" style="width:100%;font-size:12px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;margin-bottom:5px;">
+        <div style="font-size:10.5px;color:var(--sub);">${c.ts.slice(0,16).replace('T',' ')}</div>
         <div style="display:flex;gap:6px;margin-top:7px;">
-          <a class="btn btn-line btn-sm" href="${c.img}" download="${fn}" style="text-decoration:none;">⬇️ 저장</a>
+          <button class="btn btn-dark btn-sm" onclick="saveCardMemo('${c.id}')">메모 저장</button>
+          <a class="btn btn-line btn-sm" href="${c.img}" download="${fn}" style="text-decoration:none;" title="이미지 저장">⬇️</a>
           <button class="btn btn-red btn-sm" onclick="delCard('${c.id}')">삭제</button>
         </div>
       </div>
@@ -1708,6 +1725,14 @@ function delCard(id){
   db.cards=db.cards.filter(c=>c.id!==id);
   if(fs) fs.collection('cards').doc(id).delete().catch(e=>alert('삭제 실패: '+e.message));
   renderCards();
+}
+function saveCardMemo(id){
+  const el=document.getElementById('cardmemo_'+id), c=db.cards.find(x=>x.id===id);
+  if(!el||!c) return;
+  c.memo=el.value.trim();
+  if(fs) fs.collection('cards').doc(id).update({memo:c.memo})
+    .then(()=>{ el.style.borderColor='var(--green)'; setTimeout(()=>{ el.style.borderColor='var(--line)'; },1200); })
+    .catch(e=>alert('메모 저장 실패: '+e.message));
 }
 
 /* ── 엑셀 내보내기 ── */
