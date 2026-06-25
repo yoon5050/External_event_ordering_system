@@ -176,7 +176,7 @@
 <!-- ════════ 로그인 화면 ════════ -->
 <div id="loginView" style="display:none; text-align:center; padding:120px 20px;">
   <div class="brand" style="font-size:18px; margin-bottom:6px;">lowlit collective</div>
-  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 20</span></p>
+  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 22</span></p>
   <button class="btn btn-dark" style="padding:13px 28px;" onclick="login()">Google 계정으로 로그인</button>
   <p id="loginErr" style="color:var(--red); font-size:12.5px; margin-top:16px;"></p>
 </div>
@@ -350,19 +350,20 @@
         <div style="flex:1.5;"><label class="f">유형</label>
           <select id="prType" onchange="prTypeUI()">
             <option value="nm">N개 구매 시 M개 무료 (3+1 등)</option>
+            <option value="amtgift">N원 이상 구매 시 증정품 M개</option>
             <option value="amt">N개 이상 구매 시 정액 할인</option>
             <option value="pct">N개 이상 구매 시 % 할인</option>
           </select>
         </div>
       </div>
       <div class="row">
-        <div><label class="f">N (기준 수량)</label><input type="number" id="prN" min="1" value="3"></div>
-        <div id="prMWrap"><label class="f">M (무료 수량)</label><input type="number" id="prM" min="1" value="1"></div>
+        <div><label class="f" id="prNLabel">N (기준 수량)</label><input type="number" id="prN" min="1" value="3"></div>
+        <div id="prMWrap"><label class="f" id="prMLabel">M (무료 수량)</label><input type="number" id="prM" min="1" value="1"></div>
         <div id="prXWrap" style="display:none;"><label class="f" id="prXLabel">할인액 (원)</label><input type="number" id="prX" min="0"></div>
         <div style="flex:1.5;"><label class="f">대상 제품</label><select id="prPid"><option value="">전체 제품 합산</option></select></div>
       </div>
       <button class="btn btn-dark btn-sm" onclick="addPromo()">이벤트 추가</button>
-      <p style="font-size:11.5px;color:var(--sub);margin-top:8px;">N+M 무료는 묶음마다 반복 적용되고, 무료 품목은 저렴한 것부터 적용됩니다. 정액/% 할인은 주문당 1회 적용되며, <b>같은 대상에 여러 단계(예: 2개·4개)를 걸면 가장 큰 할인 하나만 적용</b>됩니다. 대상 제품에서 <b>[그룹]</b>을 고르면 색상·옵션 전체 수량을 합산해 적용합니다(예: 캐피블럭 전체).</p>
+      <p style="font-size:11.5px;color:var(--sub);margin-top:8px;">N+M 무료는 묶음마다 반복 적용되고, 무료 품목은 저렴한 것부터 적용됩니다. 정액/% 할인은 주문당 1회 적용되며, <b>같은 대상에 여러 단계(예: 2개·4개)를 걸면 가장 큰 할인 하나만 적용</b>됩니다. 대상 제품에서 <b>[그룹]</b>을 고르면 색상·옵션 전체 수량을 합산해 적용합니다(예: 캐피블럭 전체). <b>N원 이상 구매 시 증정품</b>은 주문 금액(대상 기준)이 기준 금액 이상이면 증정 수량만큼 증정품을 고르게 합니다.</p>
       <div class="scroll-x" style="margin-top:12px;">
       <table>
         <thead><tr><th>이벤트명</th><th>내용</th><th>대상</th><th>적용가</th><th>상태</th><th></th></tr></thead>
@@ -573,7 +574,7 @@
   </div>
   </section>
 
-  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 20</div>
+  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 22</div>
 </div>
 </div>
 
@@ -841,6 +842,14 @@ function delProduct(id){
   if(orderedQty(id)===0 && !confirm('제품을 삭제할까요?')) return;
   ev().products=ev().products.filter(p=>p.id!==id); save(); renderAll(false);
 }
+function moveProduct(id,dir){
+  const arr=ev().products, i=arr.findIndex(p=>p.id===id);
+  if(i<0) return;
+  const j=i+dir;
+  if(j<0||j>=arr.length) return;
+  [arr[i],arr[j]]=[arr[j],arr[i]];
+  save(); renderProducts();
+}
 function editStock(id,v){ const p=ev().products.find(p=>p.id===id); if(p){ p.stock=Math.max(0,+v||0); save(); renderHome(); } }
 function editField(id,field,v){
   const p=ev().products.find(p=>p.id===id); if(!p) return;
@@ -873,7 +882,7 @@ function renderProducts(){
       <td class="num"><input type="number" value="${p.ship||0}" min="0" style="width:80px;text-align:right;" onchange="editField('${p.id}','ship',this.value)"></td>
       <td class="num"><input type="number" value="${p.stock}" min="0" style="width:80px;text-align:right;" onchange="editField('${p.id}','stock',this.value)"></td>
       <td><span class="pill ${p.visible===false?'p-gray':'p-green'}" style="cursor:pointer;" onclick="toggleVisible('${p.id}')">${p.visible===false?'숨김':'노출'}</span></td>
-      <td><button class="btn btn-red btn-sm" onclick="delProduct('${p.id}')">삭제</button></td></tr>`);
+      <td style="white-space:nowrap;"><button class="btn btn-line btn-sm" onclick="moveProduct('${p.id}',-1)" title="위로">▲</button> <button class="btn btn-line btn-sm" onclick="moveProduct('${p.id}',1)" title="아래로">▼</button> <button class="btn btn-red btn-sm" onclick="delProduct('${p.id}')">삭제</button></td></tr>`);
   });
 }
 function copyProducts(){
@@ -919,15 +928,18 @@ function downloadTemplate(){
 function promos(){ ev().promos=ev().promos||[]; return ev().promos; }
 function prTypeUI(){
   const t=$('prType').value;
-  $('prMWrap').style.display=t==='nm'?'':'none';
-  $('prXWrap').style.display=t==='nm'?'none':'';
+  const giftLike=(t==='nm'||t==='amtgift');
+  $('prMWrap').style.display=giftLike?'':'none';
+  $('prXWrap').style.display=giftLike?'none':'';
   $('prXLabel').textContent=t==='pct'?'할인율 (%)':'할인액 (원)';
+  $('prNLabel').textContent=t==='amtgift'?'기준 금액 (원)':'N (기준 수량)';
+  $('prMLabel').textContent=t==='amtgift'?'증정 수량 (개)':'M (무료 수량)';
 }
 function addPromo(){
   const name=$('prName').value.trim(), type=$('prType').value;
   const n=Math.max(1,+$('prN').value||0), m=Math.max(1,+$('prM').value||0), x=Math.max(0,+$('prX').value||0);
   if(!name){ alert('이벤트명을 입력해 주세요.'); return; }
-  if(type!=='nm'&&!x){ alert('할인값을 입력해 주세요.'); return; }
+  if((type==='amt'||type==='pct')&&!x){ alert('할인값을 입력해 주세요.'); return; }
   if(type==='pct'&&x>100){ alert('할인율은 100% 이하로 입력해 주세요.'); return; }
   promos().push({id:'pr'+Date.now(), name, type, n, m, x, pid:$('prPid').value, active:true});
   $('prName').value=''; $('prX').value='';
@@ -943,6 +955,7 @@ function promoTarget(p){
 }
 function promoDesc(p){
   if(p.type==='nm') return `${p.n}개 구매 시 ${p.m}개 증정 (증정품 선택)`;
+  if(p.type==='amtgift') return `${fmt(p.n)}원 이상 구매 시 ${p.m}개 증정 (증정품 선택)`;
   if(p.type==='amt') return `${p.n}개 이상 구매 시 ${fmt(p.x)}원 할인`;
   return `${p.n}개 이상 구매 시 ${p.x}% 할인`;
 }
@@ -979,6 +992,9 @@ function computePromo(items){
     if(p.type==='nm'){
       const cnt=Math.floor(qty/p.n)*p.m;
       if(cnt>0){ gifts.push({id:p.id,name:p.name,count:cnt}); names.push(p.name); }
+    }else if(p.type==='amtgift'){
+      const scopeTotal=scope.reduce((s,i)=>s+i.price*i.qty,0);
+      if(scopeTotal>=p.n){ gifts.push({id:p.id,name:p.name,count:p.m}); names.push(p.name); }
     }else{
       let d=0;
       if(p.type==='amt'){ if(qty>=p.n) d=p.x; }
@@ -1108,7 +1124,7 @@ function renderCustProducts(){
     const opts=list.map(p=>`<div class="opt-row" style="padding-left:8px;">
       <input type="checkbox" id="kc_${p.id}" data-grp="${gi}" onchange="$('kq_${p.id}').style.visibility=this.checked?'visible':'hidden';updateCustSummary()">
       <span style="display:inline-block;width:22px;height:22px;border-radius:5px;border:1px solid #ccc;background:${p.color||'#e0e0e0'};flex-shrink:0;"></span>
-      <label for="kc_${p.id}" style="font-weight:400;">${esc(p.option||gName)} · ${p.listPrice>p.price?`<span style="color:#aaa;text-decoration:line-through;">${fmt(p.listPrice)}원</span> `:''}${fmt(p.price)}원${p.ship?` <span style="font-size:11.5px;color:var(--sub);">(배송비 ${fmt(p.ship)}원)</span>`:''}</label>
+      <label for="kc_${p.id}" style="font-weight:400;">${esc(p.option||gName)} · ${p.listPrice>p.price?`<span style="color:#aaa;text-decoration:line-through;">${fmt(p.listPrice)}원</span> `:''}${fmt(p.price)}원${p.ship?` <span style="font-size:11.5px;color:var(--sub);">(배송비 ${fmt(p.ship)}원)</span>`:''} <span style="font-size:11.5px;color:${remain(p)>0?(remain(p)<=p.stock*0.2?'var(--amber)':'var(--sub)'):'var(--red)'};">· ${remain(p)>0?'잔여 '+remain(p)+'개':'재고 소진'+(remain(p)<0?' (추가생산 '+(-remain(p))+'개)':'')}</span></label>
       <input type="number" class="qty" id="kq_${p.id}" min="1" value="1" style="visibility:hidden;" title="수량" oninput="updateCustSummary()" onchange="updateCustSummary()">
     </div>`).join('');
     box.insertAdjacentHTML('beforeend',`<div style="border:1.5px solid #e3e3df;border-radius:8px;margin-bottom:8px;overflow:hidden;">
