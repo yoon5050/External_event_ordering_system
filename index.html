@@ -176,7 +176,7 @@
 <!-- ════════ 로그인 화면 ════════ -->
 <div id="loginView" style="display:none; text-align:center; padding:120px 20px;">
   <div class="brand" style="font-size:18px; margin-bottom:6px;">lowlit collective</div>
-  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 17</span></p>
+  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 20</span></p>
   <button class="btn btn-dark" style="padding:13px 28px;" onclick="login()">Google 계정으로 로그인</button>
   <p id="loginErr" style="color:var(--red); font-size:12.5px; margin-top:16px;"></p>
 </div>
@@ -317,10 +317,11 @@
         <h2>📥 일괄 등록</h2>
         <label class="f">엑셀/CSV 업로드 (열: 제품명, 옵션, 판매가, 준비수량, 배송비, 정가)</label>
         <input type="file" id="pFile" accept=".xlsx,.xls,.csv" style="margin-bottom:10px;">
-        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px;">
+        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
           <button class="btn btn-dark btn-sm" onclick="importProducts()">업로드 등록</button>
           <button class="btn btn-line btn-sm" onclick="downloadTemplate()">서식 다운로드</button>
         </div>
+        <p style="font-size:11.5px;color:var(--sub);margin-bottom:14px;line-height:1.6;">준비수량·배송비 칸을 <b>비워두면 기존 제품의 재고·배송비는 그대로 유지</b>되고 가격·정가만 갱신됩니다. (새 제품은 재고 0으로 등록 후 제품관리에서 입력)</p>
         <label class="f">다른 전시에서 제품 불러오기</label>
         <div style="display:flex; gap:8px;">
           <select id="copyFrom" style="flex:1;"></select>
@@ -361,7 +362,7 @@
         <div style="flex:1.5;"><label class="f">대상 제품</label><select id="prPid"><option value="">전체 제품 합산</option></select></div>
       </div>
       <button class="btn btn-dark btn-sm" onclick="addPromo()">이벤트 추가</button>
-      <p style="font-size:11.5px;color:var(--sub);margin-top:8px;">N+M 무료는 묶음마다 반복 적용되고, 무료 품목은 저렴한 것부터 적용됩니다. 정액/% 할인은 주문당 1회 적용.</p>
+      <p style="font-size:11.5px;color:var(--sub);margin-top:8px;">N+M 무료는 묶음마다 반복 적용되고, 무료 품목은 저렴한 것부터 적용됩니다. 정액/% 할인은 주문당 1회 적용되며, <b>같은 대상에 여러 단계(예: 2개·4개)를 걸면 가장 큰 할인 하나만 적용</b>됩니다. 대상 제품에서 <b>[그룹]</b>을 고르면 색상·옵션 전체 수량을 합산해 적용합니다(예: 캐피블럭 전체).</p>
       <div class="scroll-x" style="margin-top:12px;">
       <table>
         <thead><tr><th>이벤트명</th><th>내용</th><th>대상</th><th>적용가</th><th>상태</th><th></th></tr></thead>
@@ -572,7 +573,7 @@
   </div>
   </section>
 
-  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 17</div>
+  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 20</div>
 </div>
 </div>
 
@@ -823,10 +824,17 @@ function addProduct(){
   $('pColor').value='#e0e0e0';
   save(); renderAll(false);
 }
-function upsertProduct(name,opt,price,stock,ship=0,listPrice=0,color='#e0e0e0'){
+function upsertProduct(name,opt,price,stock,ship,listPrice,color){
   const ex=ev().products.find(p=>p.name===name&&p.option===opt);
-  if(ex){ ex.price=price; ex.stock=stock; ex.ship=ship; ex.listPrice=listPrice; ex.color=color; }
-  else ev().products.push({id:'p'+Date.now()+Math.random().toString(36).slice(2,6), name, option:opt, price, listPrice, stock, ship, color, visible:true});
+  if(ex){
+    if(price!==undefined) ex.price=price;
+    if(listPrice!==undefined) ex.listPrice=listPrice;
+    if(ship!==undefined) ex.ship=ship;
+    if(stock!==undefined) ex.stock=stock;   // 비어 있으면 기존 재고 유지
+    if(color!==undefined) ex.color=color;
+  }else{
+    ev().products.push({id:'p'+Date.now()+Math.random().toString(36).slice(2,6), name, option:opt, price:price||0, listPrice:listPrice||0, stock:stock||0, ship:ship||0, color:color||'#e0e0e0', visible:true});
+  }
 }
 function delProduct(id){
   if(orderedQty(id)>0 && !confirm('이미 주문이 있는 제품입니다. 삭제할까요?')) return;
@@ -887,7 +895,12 @@ function importProducts(){
       rows.slice(1).forEach(row=>{
         const [name,opt,price,stock,ship,listPrice]=row;
         if(!name) return;
-        upsertProduct(String(name).trim(), String(opt||'').trim(), +price||0, +stock||0, +ship||0, +listPrice||0); n++;
+        const blank=v=>v===undefined||v===null||String(v).trim()==='';
+        upsertProduct(String(name).trim(), String(opt||'').trim(),
+          blank(price)?undefined:(+price||0),
+          blank(stock)?undefined:(+stock||0),
+          blank(ship)?undefined:(+ship||0),
+          blank(listPrice)?undefined:(+listPrice||0)); n++;
       });
       save(); renderAll(false);
       alert(n+'개 품목을 등록했습니다.');
@@ -924,6 +937,7 @@ function delPromo(id){ if(!confirm('이벤트를 삭제할까요?')) return; ev(
 function togglePromo(id){ const p=promos().find(x=>x.id===id); p.active=!p.active; save(); renderPromos(); renderHome(); }
 function promoTarget(p){
   if(!p.pid) return '전체 제품';
+  if(String(p.pid).startsWith('g:')) return p.pid.slice(2)+' (전체 옵션)';
   const pr=ev().products.find(x=>x.id===p.pid);
   return pr?pr.name+(pr.option?' · '+pr.option:''):'(삭제된 제품)';
 }
@@ -934,14 +948,16 @@ function promoDesc(p){
 }
 function promoPrice(p){
   if(!p.pid) return '';
-  const pr=ev().products.find(x=>x.id===p.pid);
+  let pr;
+  if(String(p.pid).startsWith('g:')) pr=ev().products.find(x=>x.name===p.pid.slice(2));
+  else pr=ev().products.find(x=>x.id===p.pid);
   if(!pr) return '';
   if(p.type==='nm') return `${p.n+p.m}개를 ${fmt(pr.price*p.n)}원에 (개당 ${fmt(Math.round(pr.price*p.n/(p.n+p.m)))}원)`;
   if(p.type==='amt') return `${p.n}개 기준 ${fmt(pr.price*p.n-p.x)}원`;
   return `${p.n}개 기준 ${fmt(Math.round(pr.price*p.n*(100-p.x)/100))}원`;
 }
 function renderPromos(){
-  $('prPid').innerHTML='<option value="">전체 제품 합산</option>'+ev().products.map(p=>`<option value="${p.id}">${esc(p.name)}${p.option?' · '+esc(p.option):''}</option>`).join('');
+  $('prPid').innerHTML='<option value="">전체 제품 합산</option>'+[...new Set(ev().products.map(p=>p.name))].map(n=>`<option value="g:${esc(n)}">[그룹] ${esc(n)} (전체 옵션 합산)</option>`).join('')+ev().products.map(p=>`<option value="${p.id}">${esc(p.name)}${p.option?' · '+esc(p.option):''}</option>`).join('');
   const tb=$('promoRows'); tb.innerHTML='';
   $('promoEmpty').style.display=promos().length?'none':'';
   promos().forEach(p=>{
@@ -953,20 +969,25 @@ function renderPromos(){
   });
 }
 function computePromo(items){
-  let disc=0; const names=[]; const gifts=[];
+  let disc=0; const names=[]; const gifts=[]; const best={};
   promos().filter(p=>p.active).forEach(p=>{
-    const scope=p.pid?items.filter(i=>i.pid===p.pid):items;
+    let scope;
+    if(p.pid&&String(p.pid).startsWith('g:')){ const gname=p.pid.slice(2); scope=items.filter(i=>i.name===gname); }
+    else scope=p.pid?items.filter(i=>i.pid===p.pid):items;
     const qty=scope.reduce((s,i)=>s+i.qty,0);
     if(!qty) return;
     if(p.type==='nm'){
       const cnt=Math.floor(qty/p.n)*p.m;
       if(cnt>0){ gifts.push({id:p.id,name:p.name,count:cnt}); names.push(p.name); }
-    }else if(p.type==='amt'){
-      if(qty>=p.n){ disc+=p.x; names.push(p.name); }
     }else{
-      if(qty>=p.n){ const d=Math.round(scope.reduce((s,i)=>s+i.price*i.qty,0)*p.x/100); if(d>0){ disc+=d; names.push(p.name); } }
+      let d=0;
+      if(p.type==='amt'){ if(qty>=p.n) d=p.x; }
+      else { if(qty>=p.n) d=Math.round(scope.reduce((s,i)=>s+i.price*i.qty,0)*p.x/100); }
+      // 같은 대상(같은 제품 또는 전체)에 여러 단계가 걸리면 가장 큰 할인 하나만 적용
+      if(d>0){ const key=p.pid||'__all__'; if(!best[key]||d>best[key].disc) best[key]={disc:d,name:p.name}; }
     }
   });
+  Object.keys(best).forEach(k=>{ disc+=best[k].disc; names.push(best[k].name); });
   return {disc,names,gifts};
 }
 
