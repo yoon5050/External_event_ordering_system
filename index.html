@@ -91,7 +91,8 @@
   .spacer{flex:1;}
   .empty{color:var(--sub); text-align:center; padding:28px 0; font-size:13px;}
   .foot{color:#b5b5b1; font-size:11px; text-align:center; margin-top:30px;}
-  .memo-cell{max-width:200px; white-space:pre-wrap; font-size:12px; color:#555;}
+  .memo-cell{max-width:240px; vertical-align:top;}
+  .memo-clamp{font-size:12px; color:#555; line-height:1.5; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:3; overflow:hidden; white-space:pre-wrap; word-break:break-word;}
   .scroll-x{overflow-x:auto;}
   .stock-warn{color:var(--red); font-weight:700;}
 
@@ -176,7 +177,7 @@
 <!-- ════════ 로그인 화면 ════════ -->
 <div id="loginView" style="display:none; text-align:center; padding:120px 20px;">
   <div class="brand" style="font-size:18px; margin-bottom:6px;">lowlit collective</div>
-  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 24</span></p>
+  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 25</span></p>
   <button class="btn btn-dark" style="padding:13px 28px;" onclick="login()">Google 계정으로 로그인</button>
   <p id="loginErr" style="color:var(--red); font-size:12.5px; margin-top:16px;"></p>
 </div>
@@ -575,7 +576,7 @@
   </div>
   </section>
 
-  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 24</div>
+  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 25</div>
 </div>
 </div>
 
@@ -1306,12 +1307,12 @@ function renderOrders(){
     tb.insertAdjacentHTML('beforeend',`<tr>
       <td><b>${o.no}</b></td>
       <td style="white-space:nowrap;">${o.ts.slice(5,10)} ${o.ts.slice(11,16)}</td>
-      <td><b>${esc(o.customer.name)}</b><br><span style="color:var(--sub);font-size:11.5px;">${esc(o.customer.phone)}</span>${o.rep?'<br><span style="color:var(--sub);font-size:11px;">🧑‍💼 '+esc(o.rep)+'</span>':''}</td>
+      <td><b>${esc(o.customer.name)}</b><br><span style="color:var(--sub);font-size:11.5px;white-space:nowrap;">${esc(o.customer.phone)}</span>${o.rep?'<br><span style="color:var(--sub);font-size:11px;white-space:nowrap;">🧑‍💼 '+esc(o.rep)+'</span>':''}</td>
       <td style="max-width:230px;">${items}</td>
       <td class="num"><b>${fmt(paid(o))}원</b>${o.discount?`<br><span style="font-size:11px;color:var(--red);">할인 -${fmt(o.discount)}</span>`:''}</td>
       <td><span class="pill p-green">${esc(o.pay)}</span></td>
       <td><span class="pill ${shipCls}" style="cursor:pointer;" onclick="cycleShip('${o.id}')" title="클릭하여 변경">${o.ship}</span></td>
-      <td class="memo-cell">${esc(memo)||'-'}</td>
+      <td class="memo-cell" title="${esc(memo)}"><div class="memo-clamp">${esc(memo)||'-'}</div></td>
       <td style="white-space:nowrap;">
         <button class="btn btn-line btn-sm" onclick="openDetail('${o.id}')">상세</button>
         <button class="btn btn-line btn-sm" onclick="printOrder('${o.id}')">🖨️</button>
