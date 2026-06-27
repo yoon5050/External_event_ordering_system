@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ko"> 
+<html lang="ko">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -176,7 +176,7 @@
 <!-- ════════ 로그인 화면 ════════ -->
 <div id="loginView" style="display:none; text-align:center; padding:120px 20px;">
   <div class="brand" style="font-size:18px; margin-bottom:6px;">lowlit collective</div>
-  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 28</span></p>
+  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 29</span></p>
   <button class="btn btn-dark" style="padding:13px 28px;" onclick="login()">Google 계정으로 로그인</button>
   <p id="loginErr" style="color:var(--red); font-size:12.5px; margin-top:16px;"></p>
 </div>
@@ -575,7 +575,7 @@
   </div>
   </section>
 
-  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 28</div>
+  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 29</div>
 </div>
 </div>
 
@@ -728,7 +728,7 @@ function startApp(u){
   fs.collection('app').doc('config').onSnapshot(d=>{
     if(d.exists){ const c=d.data(); db.events=c.events||[]; db.settings=Object.assign({},DEFAULT_SETTINGS,c.settings||{}); }
     if(!d.exists){ db.events=[{id:'e'+Date.now(), name:'새 전시', products:[]}]; save(); return; }
-    if(!db.events.length){ return; } // 로딩 중/빈 설정 — 기존 데이터를 덮어쓰지 않음
+    if(!db.events.length){ db.events=[{id:'e_tmp', name:'(데이터 비어있음 / 백업 복원 필요)', products:[]}]; } // 화면 멈춤 방지 · 저장하지 않음(기존 데이터 보호)
     const savedEv=localStorage.getItem('lowlit_current_event');
     if(!db.currentEventId) db.currentEventId=db.events.find(e=>e.id===savedEv)?savedEv:db.events[0].id;
     if(!db.events.find(e=>e.id===db.currentEventId)) db.currentEventId=db.events[0].id;
