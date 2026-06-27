@@ -176,7 +176,7 @@
 <!-- ════════ 로그인 화면 ════════ -->
 <div id="loginView" style="display:none; text-align:center; padding:120px 20px;">
   <div class="brand" style="font-size:18px; margin-bottom:6px;">lowlit collective</div>
-  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 29</span></p>
+  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 30</span></p>
   <button class="btn btn-dark" style="padding:13px 28px;" onclick="login()">Google 계정으로 로그인</button>
   <p id="loginErr" style="color:var(--red); font-size:12.5px; margin-top:16px;"></p>
 </div>
@@ -455,6 +455,7 @@
           <button class="btn btn-line btn-sm" onclick="backupJson()">백업 내려받기 (.json)</button>
           <input type="file" id="restoreFile" accept=".json" style="display:none;" onchange="restoreJson(this)">
           <button class="btn btn-line btn-sm" onclick="document.getElementById('restoreFile').click()">백업 불러오기</button>
+          <button class="btn btn-line btn-sm" style="border-color:var(--amber);color:var(--amber);" onclick="recoverCatalog()">⚠️ 카탈로그 복구</button>
           <button class="btn btn-red btn-sm" onclick="wipeAll()">전체 데이터 삭제</button>
         </div>
       </div>
@@ -575,7 +576,7 @@
   </div>
   </section>
 
-  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 29</div>
+  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 30</div>
 </div>
 </div>
 
@@ -1763,6 +1764,32 @@ function exportXlsx(){
 }
 
 /* ── 백업 ── */
+function recoverCatalog(){
+  if(!confirm('⚠️ 제품/전시 설정이 비어 있을 때만 사용하세요.\n\n2026 더메종 전시와 제품 35종을 복구하고, 클라우드에 남아있는 기존 주문에 다시 연결합니다.\n계속할까요?')) return;
+  const rows=[
+    ['캐피블럭','퓨어화이트',121000,27,4000],['캐피블럭','마블화이트',121000,48,4000],['캐피블럭','캔디화이트',121000,25,4000],
+    ['캐피블럭','코카레드',121000,4,4000],['캐피블럭','바나나옐로우',121000,28,4000],['캐피블럭','트레비그린',121000,16,4000],
+    ['캐피블럭','포카리블루',121000,8,4000],['캐피블럭','제로블랙',121000,6,4000],['캐피블럭','그래나이트',121000,6,4000],
+    ['캐피블럭','데저트',121000,3,4000],['캐피블럭','샌드스톤',121000,4,4000],
+    ['십이지신램프','에쿠스램프',236000,30,4000],
+    ['드롭램프S','퓨어화이트',330000,6,8000],['드롭램프S','캔디화이트',330000,6,8000],
+    ['드롭램프L','퓨어화이트',429000,6,8000],['드롭램프L','캔디화이트',429000,6,8000],
+    ['코스모 봄','딥그린',44000,9,0],['코스모 봄','아이보리',44000,7,0],['코스모 봄','머드',44000,2,0],
+    ['소품','미니모빌',25000,7,0],
+    ['위뜨 바디','블루',0,3,0],['위뜨 바디','블랙',0,15,0],['위뜨 바디','와인',0,9,0],['위뜨 바디','머드',0,11,0],
+    ['위뜨 갓','얀/블랙',0,3,0],['위뜨 갓','얀/블루',0,16,0],['위뜨 갓','얀/그린',0,1,0],['위뜨 갓','얀/와인',0,3,0],
+    ['위뜨 갓','패브릭/블랙 도트',0,3,0],['위뜨 갓','패브릭/바코드',0,3,0],['위뜨 갓','패브릭/모네',0,2,0],
+    ['위뜨 갓','패브릭/오렌지',0,1,0],['위뜨 갓','패브릭/클림트 레드',0,5,0],['위뜨 갓','패브릭/레갈 레드',0,1,0],['위뜨 갓','패브릭/레갈 블랙',0,1,0]
+  ];
+  let eid=null;
+  if(db.orders&&db.orders.length){ const c={}; db.orders.forEach(o=>{ if(o.eventId) c[o.eventId]=(c[o.eventId]||0)+1; }); eid=Object.keys(c).sort((a,b)=>c[b]-c[a])[0]; }
+  if(!eid) eid='e'+Date.now();
+  const products=rows.map((r,i)=>({id:'p'+Date.now()+i+Math.random().toString(36).slice(2,5), name:r[0], option:r[1], price:r[2], listPrice:0, stock:r[3], ship:r[4], color:'#e0e0e0', visible:true}));
+  db.events=[{id:eid, name:'2026 더메종', products, promos:[]}];
+  db.currentEventId=eid; localStorage.setItem('lowlit_current_event',eid);
+  save(); renderAll();
+  alert('복구 완료 ✅\n제품 '+products.length+'종 복구, 기존 주문 '+(db.orders?db.orders.length:0)+'건 연결되었습니다.\n가격 할인은 제품관리 → 일괄 등록으로 다시 적용하세요.');
+}
 function backupJson(){
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([JSON.stringify(db,null,1)],{type:'application/json'}));
