@@ -176,7 +176,7 @@
 <!-- ════════ 로그인 화면 ════════ -->
 <div id="loginView" style="display:none; text-align:center; padding:120px 20px;">
   <div class="brand" style="font-size:18px; margin-bottom:6px;">lowlit collective</div>
-  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 30</span></p>
+  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 31</span></p>
   <button class="btn btn-dark" style="padding:13px 28px;" onclick="login()">Google 계정으로 로그인</button>
   <p id="loginErr" style="color:var(--red); font-size:12.5px; margin-top:16px;"></p>
 </div>
@@ -406,9 +406,10 @@
     </div>
 
     <div class="card">
-      <h2>📁 명함 구글 드라이브 업로드 <span class="hint">명함 탭에서 올린 사진을 드라이브에도 자동 저장 · 전시 이름 폴더로 자동 정리</span></h2>
-      <div class="row"><div><label class="f">Apps Script 웹앱 URL</label><input type="text" id="driveScriptUrl" placeholder="https://script.google.com/macros/s/.../exec" onchange="saveSettings()"></div></div>
-      <p style="font-size:11.5px;color:var(--sub);margin-top:8px;line-height:1.7;">비워두면 명함은 이 앱(명함 탭)에만 저장됩니다. URL을 입력하면 명함 촬영 시 구글 드라이브의 <b>전시 이름 폴더</b>에 사진이 자동 업로드됩니다. (설정 방법은 별도 안내 참고)</p>
+      <h2>📇 명함 설정 <span class="hint">Gemini AI 자동 정리 · 구글 드라이브 백업</span></h2>
+      <div class="row"><div><label class="f">Gemini API 키 <span style="font-weight:400;color:var(--sub);">(명함 자동 정리 · aistudio.google.com/apikey 무료 발급)</span></label><input type="text" id="geminiKey" placeholder="AIza..." onchange="saveSettings()"></div></div>
+      <div class="row"><div><label class="f">Apps Script 웹앱 URL <span style="font-weight:400;color:var(--sub);">(명함 구글 드라이브 자동 백업)</span></label><input type="text" id="driveScriptUrl" placeholder="https://script.google.com/macros/s/.../exec" onchange="saveSettings()"></div></div>
+      <p style="font-size:11.5px;color:var(--sub);margin-top:8px;line-height:1.7;">Gemini 키를 넣으면 명함을 찍는 순간 <b>이름·회사/부서·직함·이메일·연락처</b>를 자동으로 뽑아 채웁니다(리멤버처럼). 드라이브 URL을 넣으면 사진이 전시 이름 폴더에 자동 백업돼요. 둘 다 비워둬도 앱에서 직접 정리할 수 있습니다.</p>
     </div>
 
     <div class="card">
@@ -486,7 +487,7 @@
     </div>
     <div class="card">
       <h2>🗂️ 등록된 명함 <span class="hint" id="cardCount"></span></h2>
-      <div id="cardGallery" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;"></div>
+      <div id="cardGallery" style="display:flex;flex-direction:column;gap:10px;"></div>
       <div class="empty" id="cardEmpty" style="display:none;">아직 등록된 명함이 없습니다.</div>
     </div>
   </section>
@@ -576,7 +577,7 @@
   </div>
   </section>
 
-  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 30</div>
+  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 31</div>
 </div>
 </div>
 
@@ -596,6 +597,16 @@
     <div class="row"><div><label class="f">제품 구성 가져오기 (선택)</label><select id="newEvCopy"></select></div></div>
     <p style="font-size:12px; color:var(--sub); margin-bottom:14px;">제품을 가져오면 품목·가격이 복사됩니다. 준비수량은 새로 입력하세요.</p>
     <button class="btn btn-dark" onclick="createNewEvent()">전시 만들기</button>
+  </div>
+</dialog>
+
+<dialog id="cardLightbox">
+  <div style="padding:10px; background:#111;">
+    <img id="cardLightboxImg" style="max-width:88vw; max-height:82vh; display:block; border-radius:6px;">
+    <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:8px;">
+      <a id="cardLightboxDl" class="btn btn-line btn-sm" download style="text-decoration:none;">⬇️ 저장</a>
+      <button class="btn btn-ghost btn-sm" onclick="cardLightbox.close()">닫기</button>
+    </div>
   </div>
 </dialog>
 
@@ -670,7 +681,7 @@ const DEFAULT_SETTINGS={
   prodNotice:DEFAULT_NOTICE,
   mailTo:'', mailFrom:'LOWLIT 주문봇', ejsService:'', ejsTemplate:'', ejsKey:'',
   mailPerOrder:false, mailStart:'', mailEnd:'',
-  driveScriptUrl:''
+  driveScriptUrl:'', geminiKey:''
 };
 let db={events:[], currentEventId:null, orders:[], cards:[], settings:Object.assign({},DEFAULT_SETTINGS)};
 let fs=null, auth=null, configReady=false, started=false;
@@ -678,9 +689,11 @@ let fs=null, auth=null, configReady=false, started=false;
 function clean(x){ return JSON.parse(JSON.stringify(x)); } // undefined 제거 + 순수 객체화
 function save(){ // 전시·제품·이벤트·설정 공유 저장 (모든 기기에 실시간 반영)
   if(!fs) return;
+  if(!db.events.length || db.events.every(e=>e.id==='e_tmp')){ return; } // 빈/임시 상태는 저장하지 않음(데이터 덮어쓰기 방지)
   try{
     fs.collection('app').doc('config').set(clean({events:db.events, settings:db.settings}))
       .catch(e=>alert('저장 실패: '+e.message));
+    try{ localStorage.setItem('lowlit_events_mirror', JSON.stringify(db.events)); }catch(_){}
   }catch(e){ alert('저장 오류: '+e.message); }
 }
 function saveOrderDoc(o){
@@ -758,6 +771,7 @@ function saveSettings(){
   s.ejsService=$('ejsService').value.trim(); s.ejsTemplate=$('ejsTemplate').value.trim(); s.ejsKey=$('ejsKey').value.trim();
   s.mailPerOrder=$('mailPerOrder').checked; s.mailStart=$('mailStart').value; s.mailEnd=$('mailEnd').value;
   s.driveScriptUrl=$('driveScriptUrl').value.trim();
+  s.geminiKey=$('geminiKey').value.trim();
   save();
 }
 
@@ -1692,9 +1706,9 @@ function uploadCard(input){
       cv.getContext('2d').drawImage(img,0,0,w,h);
       let q=0.7, dataUrl=cv.toDataURL('image/jpeg',q);
       while(dataUrl.length>900000 && q>0.3){ q-=0.1; dataUrl=cv.toDataURL('image/jpeg',q); }
-      const card={id:'c'+Date.now()+Math.random().toString(36).slice(2,5), eventId:db.currentEventId, ts:nowLocal(), memo:$('cardMemo').value.trim(), img:dataUrl};
+      const card={id:'c'+Date.now()+Math.random().toString(36).slice(2,5), eventId:db.currentEventId, ts:nowLocal(), name:'', company:'', title:'', email:'', phone:'', memo:$('cardMemo').value.trim(), img:dataUrl};
       fs.collection('cards').doc(card.id).set(clean(card))
-        .then(()=>{ uploadToDrive(card); status.textContent='✅ 업로드 완료'+(db.settings.driveScriptUrl?' · 드라이브 동기화됨':''); $('cardMemo').value=''; setTimeout(()=>status.textContent='',2800); })
+        .then(()=>{ uploadToDrive(card); $('cardMemo').value=''; status.textContent='✅ 업로드 완료'+(db.settings.driveScriptUrl?' · 드라이브 백업됨':''); extractCardInfo(card); })
         .catch(err=>{ status.textContent=''; alert('명함 저장 실패: '+err.message); });
       input.value='';
     };
@@ -1708,20 +1722,28 @@ function renderCards(){
   if(!$('cardGallery')) return;
   $('cardEvName').textContent='· '+ev().name;
   const list=cardsList();
-  $('cardCount').textContent=list.length?list.length+'장':'';
+  $('cardCount').textContent=list.length?list.length+'명':'';
   const g=$('cardGallery'); g.innerHTML='';
   $('cardEmpty').style.display=list.length?'none':'';
   list.forEach(c=>{
-    const fn='명함_'+c.ts.slice(0,10)+'.jpg';
-    g.insertAdjacentHTML('beforeend',`<div style="border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff;">
-      <a href="${c.img}" download="${fn}" target="_blank"><img src="${c.img}" style="width:100%;height:130px;object-fit:cover;display:block;background:#f4f4f2;"></a>
-      <div style="padding:8px 10px;">
-        <input type="text" id="cardmemo_${c.id}" value="${esc(c.memo)}" placeholder="메모 입력 (이름·회사·용건 등)" style="width:100%;font-size:12px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;margin-bottom:5px;">
-        <div style="font-size:10.5px;color:var(--sub);">${c.ts.slice(0,16).replace('T',' ')}</div>
-        <div style="display:flex;gap:6px;margin-top:7px;">
-          <button class="btn btn-dark btn-sm" onclick="saveCardMemo('${c.id}')">메모 저장</button>
-          <a class="btn btn-line btn-sm" href="${c.img}" download="${fn}" style="text-decoration:none;" title="이미지 저장">⬇️</a>
+    g.insertAdjacentHTML('beforeend',`<div style="display:flex;gap:12px;border:1px solid var(--line);border-radius:10px;padding:10px;background:#fff;align-items:flex-start;">
+      <img src="${c.img}" onclick="openCardImage('${c.id}')" title="크게 보기" style="width:132px;height:84px;object-fit:cover;border-radius:6px;cursor:zoom-in;flex-shrink:0;background:#f4f4f2;">
+      <div style="flex:1;min-width:0;">
+        <div class="row" style="gap:8px;margin-bottom:6px;">
+          <div style="flex:1;min-width:90px;"><label class="f">이름</label><input type="text" id="cf_name_${c.id}" value="${esc(c.name||'')}"></div>
+          <div style="flex:1.5;min-width:120px;"><label class="f">회사/부서</label><input type="text" id="cf_company_${c.id}" value="${esc(c.company||'')}"></div>
+          <div style="flex:1;min-width:90px;"><label class="f">직함</label><input type="text" id="cf_title_${c.id}" value="${esc(c.title||'')}"></div>
+        </div>
+        <div class="row" style="gap:8px;margin-bottom:6px;">
+          <div style="flex:1.5;min-width:140px;"><label class="f">이메일</label><input type="text" id="cf_email_${c.id}" value="${esc(c.email||'')}"></div>
+          <div style="flex:1;min-width:120px;"><label class="f">연락처</label><input type="text" id="cf_phone_${c.id}" value="${esc(c.phone||'')}"></div>
+        </div>
+        <div><label class="f">메모</label><textarea id="cf_memo_${c.id}" style="min-height:44px;">${esc(c.memo||'')}</textarea></div>
+        <div style="display:flex;gap:6px;margin-top:7px;align-items:center;flex-wrap:wrap;">
+          <button class="btn btn-dark btn-sm" id="cardsave_${c.id}" onclick="saveCard('${c.id}')">저장</button>
+          <a class="btn btn-line btn-sm" href="${c.img}" download="명함_${esc((c.name||c.ts.slice(0,10)))}.jpg" style="text-decoration:none;">⬇️ 이미지</a>
           <button class="btn btn-red btn-sm" onclick="delCard('${c.id}')">삭제</button>
+          <span style="font-size:10.5px;color:var(--sub);margin-left:auto;">${c.ts.slice(0,16).replace('T',' ')}</span>
         </div>
       </div>
     </div>`);
@@ -1733,13 +1755,40 @@ function delCard(id){
   if(fs) fs.collection('cards').doc(id).delete().catch(e=>alert('삭제 실패: '+e.message));
   renderCards();
 }
-function saveCardMemo(id){
-  const el=document.getElementById('cardmemo_'+id), c=db.cards.find(x=>x.id===id);
-  if(!el||!c) return;
-  c.memo=el.value.trim();
-  if(fs) fs.collection('cards').doc(id).update({memo:c.memo})
-    .then(()=>{ el.style.borderColor='var(--green)'; setTimeout(()=>{ el.style.borderColor='var(--line)'; },1200); })
-    .catch(e=>alert('메모 저장 실패: '+e.message));
+function saveCard(id){
+  const c=db.cards.find(x=>x.id===id); if(!c) return;
+  const g=f=>{ const el=document.getElementById('cf_'+f+'_'+id); return el?el.value.trim():(c[f]||''); };
+  c.name=g('name'); c.company=g('company'); c.title=g('title'); c.email=g('email'); c.phone=g('phone'); c.memo=g('memo');
+  if(fs) fs.collection('cards').doc(id).update({name:c.name,company:c.company,title:c.title,email:c.email,phone:c.phone,memo:c.memo})
+    .then(()=>{ const b=document.getElementById('cardsave_'+id); if(b){ const o=b.textContent; b.textContent='저장됨 ✓'; setTimeout(()=>{ b.textContent=o; },1200); } })
+    .catch(e=>alert('명함 저장 실패: '+e.message));
+}
+function openCardImage(id){
+  const c=db.cards.find(x=>x.id===id); if(!c) return;
+  $('cardLightboxImg').src=c.img;
+  const dl=$('cardLightboxDl'); dl.href=c.img; dl.download='명함_'+String(c.name||c.ts.slice(0,10)).replace(/[\\/:*?"<>|]/g,'')+'.jpg';
+  cardLightbox.showModal();
+}
+async function extractCardInfo(card){
+  const key=db.settings.geminiKey; if(!key) return;
+  const b64=(card.img||'').split(',')[1]; if(!b64) return;
+  const status=$('cardUploadStatus'); if(status) status.textContent='🔎 명함 정보 자동 인식 중…';
+  try{
+    const body={contents:[{parts:[
+      {text:'다음 명함 이미지에서 정보를 추출해 JSON으로만 답하세요. 키: name(이름), company(회사명과 부서), title(직함), email, phone(대표 휴대폰 또는 전화 1개). 값이 없으면 빈 문자열. 코드블록이나 설명 없이 순수 JSON만 출력.'},
+      {inline_data:{mime_type:'image/jpeg', data:b64}}
+    ]}]};
+    const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key='+encodeURIComponent(key),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const j=await r.json();
+    if(j.error) throw new Error(j.error.message||'API 오류');
+    let txt=(j.candidates&&j.candidates[0]&&j.candidates[0].content&&j.candidates[0].content.parts&&j.candidates[0].content.parts[0].text)||'';
+    txt=txt.replace(/```json/gi,'').replace(/```/g,'').trim();
+    const info=JSON.parse(txt);
+    const c=db.cards.find(x=>x.id===card.id)||card;
+    c.name=info.name||''; c.company=info.company||''; c.title=info.title||''; c.email=info.email||''; c.phone=info.phone||'';
+    if(fs) await fs.collection('cards').doc(card.id).update({name:c.name,company:c.company,title:c.title,email:c.email,phone:c.phone});
+    if(status){ status.textContent='✅ 명함 정보 자동 정리 완료'; setTimeout(()=>{ if(status.textContent.indexOf('완료')>=0) status.textContent=''; },2500); }
+  }catch(e){ if(status) status.textContent='명함은 저장됨 · 자동 인식 실패(아래에서 직접 입력하세요)'; }
 }
 
 /* ── 엑셀 내보내기 ── */
@@ -1835,6 +1884,7 @@ function initSettings(){
   $('ejsTemplate').value=s.ejsTemplate||''; $('ejsKey').value=s.ejsKey||'';
   $('mailPerOrder').checked=!!s.mailPerOrder; $('mailStart').value=s.mailStart||''; $('mailEnd').value=s.mailEnd||'';
   $('driveScriptUrl').value=s.driveScriptUrl||'';
+  $('geminiKey').value=s.geminiKey||'';
 }
 function renderAll(resetTab=true){
   if(!db.events.length||!ev()) return;
