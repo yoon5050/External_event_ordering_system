@@ -176,7 +176,7 @@
 <!-- ════════ 로그인 화면 ════════ -->
 <div id="loginView" style="display:none; text-align:center; padding:120px 20px;">
   <div class="brand" style="font-size:18px; margin-bottom:6px;">lowlit collective</div>
-  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 34</span></p>
+  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 36</span></p>
   <button class="btn btn-dark" style="padding:13px 28px;" onclick="login()">Google 계정으로 로그인</button>
   <p id="loginErr" style="color:var(--red); font-size:12.5px; margin-top:16px;"></p>
 </div>
@@ -425,15 +425,18 @@
       <div class="row"><div><label class="f">회사소개서 링크</label><input type="text" id="matCompanyUrl" placeholder="https:// (구글드라이브·노션 등 공유 링크)" onchange="saveSettings()"></div></div>
       <div class="row"><div><label class="f">제품카탈로그 링크</label><input type="text" id="matCatalogUrl" placeholder="https://" onchange="saveSettings()"></div></div>
       <div class="row"><div><label class="f">캐피블럭 소개서(B2B) 링크</label><input type="text" id="matCappieUrl" placeholder="https://" onchange="saveSettings()"></div></div>
+      <div class="row"><div><label class="f">프레스킷(Press Kit) 드라이브 링크</label><input type="text" id="matPresskitUrl" placeholder="https:// (구글 드라이브 공유 링크)" onchange="saveSettings()"></div></div>
       <p style="font-size:11.5px;color:var(--sub);margin-top:8px;line-height:1.7;">자료 공유 링크를 넣어두면, 명함·상담 등록에서 자료를 체크하고 '등록 + 자료 메일 발송'을 누를 때 그 링크가 담긴 메일이 상담자에게 자동 발송됩니다. (메일 발송은 아래 EmailJS 설정이 되어 있어야 해요.)</p>
     </div>
 
     <div class="card">
       <h2>📧 메일 알림 <span class="hint">무료 EmailJS 사용 · 최초 1회 키 입력 필요</span></h2>
       <div class="row">
-        <div><label class="f">받는 사람 이메일 *</label><input type="text" id="mailTo" placeholder="예: lowlitco@naver.com" onchange="saveSettings()"></div>
-        <div><label class="f">보내는 사람 표시 이름</label><input type="text" id="mailFrom" placeholder="예: LOWLIT 주문봇" onchange="saveSettings()"></div>
+        <div><label class="f">받는 사람 이메일(내부 알림) *</label><input type="text" id="mailTo" placeholder="예: lowlitco@naver.com" onchange="saveSettings()"></div>
+        <div><label class="f">보내는 사람 표시 이름</label><input type="text" id="mailFrom" placeholder="예: LOWLIT COLLECTIVE" onchange="saveSettings()"></div>
+        <div><label class="f">보내는/회신 이메일</label><input type="text" id="mailFromEmail" placeholder="예: contact@lowlit.co" onchange="saveSettings()"></div>
       </div>
+      <p style="font-size:11.5px;color:var(--sub);margin:-4px 0 8px;line-height:1.7;">※ 실제 발신 주소는 EmailJS에 연결한 이메일 계정으로 나갑니다. 회사 주소로 보이게 하려면 EmailJS 서비스에 회사 메일을 연결하거나, 여기 '보내는/회신 이메일'을 넣고 템플릿의 Reply-To를 <code>{{reply_to}}</code>로 지정하세요.</p>
       <div class="row">
         <div><label class="f">EmailJS Service ID</label><input type="text" id="ejsService" onchange="saveSettings()"></div>
         <div><label class="f">EmailJS Template ID</label><input type="text" id="ejsTemplate" onchange="saveSettings()"></div>
@@ -512,6 +515,7 @@
         <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer;"><input type="checkbox" id="mat_company" style="width:17px;height:17px;accent-color:#111;"> 회사소개서</label>
         <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer;"><input type="checkbox" id="mat_catalog" style="width:17px;height:17px;accent-color:#111;"> 제품카탈로그</label>
         <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer;"><input type="checkbox" id="mat_cappie" style="width:17px;height:17px;accent-color:#111;"> 캐피블럭 소개서(B2B)</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer;"><input type="checkbox" id="mat_presskit" style="width:17px;height:17px;accent-color:#111;"> 프레스킷(Press Kit)</label>
         <div style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="mat_etc" style="width:17px;height:17px;accent-color:#111;"><span style="font-size:14px;">기타:</span><input type="text" id="mat_etc_text" placeholder="자료명/링크 기록" style="flex:1;max-width:320px;"></div>
       </div>
       <div style="display:flex; gap:8px; flex-wrap:wrap;">
@@ -623,7 +627,7 @@
   </div>
   </section>
 
-  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 34</div>
+  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 36</div>
 </div>
 </div>
 
@@ -725,11 +729,11 @@ const DEFAULT_SETTINGS={
   shipNote:DEFAULT_SHIPNOTE,
   privacyText:DEFAULT_PRIVACY,
   prodNotice:DEFAULT_NOTICE,
-  mailTo:'', mailFrom:'LOWLIT 주문봇', ejsService:'', ejsTemplate:'', ejsKey:'',
+  mailTo:'', mailFrom:'LOWLIT COLLECTIVE', mailFromEmail:'', ejsService:'', ejsTemplate:'', ejsKey:'',
   mailPerOrder:false, mailStart:'', mailEnd:'',
   driveScriptUrl:'', geminiKey:'',
   reps:['재식','윤이','다움','윤지','양호','순호'],
-  matCompanyUrl:'', matCatalogUrl:'', matCappieUrl:''
+  matCompanyUrl:'', matCatalogUrl:'', matCappieUrl:'', matPresskitUrl:''
 };
 let db={events:[], currentEventId:null, orders:[], cards:[], settings:Object.assign({},DEFAULT_SETTINGS)};
 let fs=null, auth=null, configReady=false, started=false;
@@ -815,12 +819,12 @@ function saveSettings(){
   s.coName=$('coName').value; s.coWeb=$('coWeb').value; s.coAddr=$('coAddr').value;
   s.coEmail=$('coEmail').value;
   s.shipNote=$('shipNote').value; s.privacyText=$('privacyText').value; s.prodNotice=$('prodNotice').value;
-  s.mailTo=$('mailTo').value.trim(); s.mailFrom=$('mailFrom').value.trim();
+  s.mailTo=$('mailTo').value.trim(); s.mailFrom=$('mailFrom').value.trim(); s.mailFromEmail=$('mailFromEmail').value.trim();
   s.ejsService=$('ejsService').value.trim(); s.ejsTemplate=$('ejsTemplate').value.trim(); s.ejsKey=$('ejsKey').value.trim();
   s.mailPerOrder=$('mailPerOrder').checked; s.mailStart=$('mailStart').value; s.mailEnd=$('mailEnd').value;
   s.driveScriptUrl=$('driveScriptUrl').value.trim();
   s.geminiKey=$('geminiKey').value.trim();
-  s.matCompanyUrl=$('matCompanyUrl').value.trim(); s.matCatalogUrl=$('matCatalogUrl').value.trim(); s.matCappieUrl=$('matCappieUrl').value.trim();
+  s.matCompanyUrl=$('matCompanyUrl').value.trim(); s.matCatalogUrl=$('matCatalogUrl').value.trim(); s.matCappieUrl=$('matCappieUrl').value.trim(); s.matPresskitUrl=$('matPresskitUrl').value.trim();
   save();
 }
 
@@ -1561,15 +1565,15 @@ function sendMail(subject,message,toEmail){
   const s=db.settings;
   if(!mailReady() && !toEmail) return Promise.reject(new Error('메일 설정이 완료되지 않았습니다. 설정에서 EmailJS 정보와 받는 이메일을 입력해 주세요.'));
   return emailjs.send(s.ejsService, s.ejsTemplate, {
-    to_email:(toEmail||s.mailTo), from_name:s.mailFrom||'주문 알림', subject, message
+    to_email:(toEmail||s.mailTo), from_name:s.mailFrom||'LOWLIT COLLECTIVE', from_email:(s.mailFromEmail||''), reply_to:(s.mailFromEmail||s.coEmail||''), subject, message
   }, {publicKey:s.ejsKey});
 }
-function mailWrap(inner){
+function mailWrap(inner,subtitle){
   return `<div style="margin:0;padding:20px 10px;background:#f4f4f2;font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;">`+
    `<div style="max-width:600px;margin:0 auto;background:#ffffff;border:1px solid #eeeeee;border-radius:12px;overflow:hidden;">`+
     `<div style="background:#111111;padding:16px 18px;">`+
       `<div style="font-size:15px;font-weight:bold;color:#ffffff;letter-spacing:-0.2px;">LOWLIT COLLECTIVE</div>`+
-      `<div style="font-size:11px;color:#9a9a9a;margin-top:3px;">전시 주문 알림</div>`+
+      `<div style="font-size:11px;color:#9a9a9a;margin-top:3px;">${subtitle||'전시 주문 알림'}</div>`+
     `</div>`+
     `<div style="padding:16px 18px;">${inner}</div>`+
     `<div style="padding:11px 18px;border-top:1px solid #eeeeee;font-size:10.5px;color:#bbbbbb;">LOWLIT 전시 주문관리 · 자동 발송 메일</div>`+
@@ -1780,7 +1784,7 @@ async function extractCardToForm(dataUrl){
 }
 function resetLeadForm(){
   ['regName','regCompany','regTitle','regEmail','regPhone','regMemo','mat_etc_text'].forEach(i=>{ if($(i)) $(i).value=''; });
-  ['mat_company','mat_catalog','mat_cappie','mat_etc'].forEach(i=>{ if($(i)) $(i).checked=false; });
+  ['mat_company','mat_catalog','mat_cappie','mat_presskit','mat_etc'].forEach(i=>{ if($(i)) $(i).checked=false; });
   pendingCardImg='';
 }
 function registerLead(send){
@@ -1790,6 +1794,7 @@ function registerLead(send){
   if($('mat_company').checked) mats.push('회사소개서');
   if($('mat_catalog').checked) mats.push('제품카탈로그');
   if($('mat_cappie').checked) mats.push('캐피블럭 소개서(B2B)');
+  if($('mat_presskit').checked) mats.push('프레스킷(Press Kit)');
   if($('mat_etc').checked && gv('mat_etc_text')) mats.push('기타: '+gv('mat_etc_text'));
   if(!name&&!company&&!email&&!phone&&!memo&&!pendingCardImg){ alert('명함 사진을 첨부하거나 내용을 입력해 주세요.'); return; }
   if(!fs){ alert('서버 연결을 확인해 주세요.'); return; }
@@ -1808,14 +1813,17 @@ function registerLead(send){
 function sendLeadMaterials(name, email, mats){
   const s=db.settings;
   if(!(typeof emailjs!=='undefined'&&s.ejsService&&s.ejsTemplate&&s.ejsKey)){ alert('명함은 등록됐어요. 메일 발송은 설정 → 메일 알림의 EmailJS 정보가 필요합니다.'); return; }
-  const urlFor=m=> m==='회사소개서'?s.matCompanyUrl : (m==='제품카탈로그'?s.matCatalogUrl : (m.indexOf('캐피블럭')>=0?s.matCappieUrl:''));
-  const items=mats.map(m=>{ const u=urlFor(m); return `<li style="margin-bottom:6px;">${esc(m)}${u?` — <a href="${esc(u)}" style="color:#3a6fd8;">${esc(u)}</a>`:''}</li>`; }).join('');
+  const urlFor=m=> m==='회사소개서'?s.matCompanyUrl : (m==='제품카탈로그'?s.matCatalogUrl : (m.indexOf('캐피블럭')>=0?s.matCappieUrl : ((m.indexOf('프레스킷')>=0||m.indexOf('Press')>=0)?s.matPresskitUrl:'')));
+  const items=mats.map(m=>{ const u=urlFor(m); return `<div style="border:1px solid #eeeeee;border-radius:8px;padding:12px 14px;margin-bottom:8px;">`+
+      `<div style="font-size:13px;font-weight:bold;color:#111111;">${esc(m)}</div>`+
+      (u?`<a href="${esc(u)}" style="display:inline-block;margin-top:8px;background:#111111;color:#ffffff;text-decoration:none;font-size:12px;font-weight:bold;padding:8px 16px;border-radius:6px;">자료 보기 →</a>`:`<div style="font-size:12px;color:#999999;margin-top:5px;">담당자가 별도로 전달드립니다.</div>`)+
+    `</div>`; }).join('');
   const inner=mailTitle('요청하신 자료를 보내드립니다')+
-    `<div style="font-size:13px;color:#333;line-height:1.7;">${esc(name||'')} 님, 안녕하세요. LOWLIT COLLECTIVE입니다.<br>전시에서 상담해 주셔서 감사합니다. 요청하신 자료를 아래에서 확인해 주세요.</div>`+
-    `<ul style="font-size:13px;color:#333;padding-left:18px;margin-top:10px;">${items}</ul>`+
-    `<div style="font-size:12px;color:#888;margin-top:12px;">문의: ${esc(s.coEmail||'')} · ${esc(s.coWeb||'')}</div>`;
+    `<div style="font-size:13px;color:#333333;line-height:1.75;">${esc(name||'')} 님, 안녕하세요.<br>LOWLIT COLLECTIVE입니다. 전시에서 상담해 주셔서 감사합니다.<br>요청하신 자료를 아래에서 확인해 주세요.</div>`+
+    `<div style="margin-top:14px;">${items}</div>`+
+    `<div style="font-size:12px;color:#888888;margin-top:16px;line-height:1.7;border-top:1px solid #eeeeee;padding-top:12px;">LOWLIT COLLECTIVE<br>${esc(s.coEmail||'')}${s.coWeb?' · '+esc(s.coWeb):''}</div>`;
   const st=$('cardUploadStatus'); if(st) st.textContent='메일 발송 중…';
-  sendMail('[LOWLIT] 요청하신 자료 안내', mailWrap(inner), email)
+  sendMail('[LOWLIT COLLECTIVE] 요청하신 자료 안내', mailWrap(inner,'자료 안내'), email)
     .then(()=>{ if(st){ st.textContent='✅ 등록 + 자료 메일 발송 완료 ('+email+')'; setTimeout(()=>{ if(st.textContent.indexOf('발송 완료')>=0) st.textContent=''; },3500); } })
     .catch(e=>{ alert('명함은 등록됐어요. 메일 발송 실패: '+(e.text||e.message||e)); if(st) st.textContent=''; });
 }
@@ -2048,12 +2056,12 @@ function initSettings(){
   $('coName').value=s.coName; $('coWeb').value=s.coWeb; $('coAddr').value=s.coAddr;
   $('coEmail').value=s.coEmail;
   $('shipNote').value=s.shipNote||''; $('privacyText').value=s.privacyText; $('prodNotice').value=s.prodNotice||DEFAULT_NOTICE;
-  $('mailTo').value=s.mailTo||''; $('mailFrom').value=s.mailFrom||''; $('ejsService').value=s.ejsService||'';
+  $('mailTo').value=s.mailTo||''; $('mailFrom').value=s.mailFrom||''; $('mailFromEmail').value=s.mailFromEmail||''; $('ejsService').value=s.ejsService||'';
   $('ejsTemplate').value=s.ejsTemplate||''; $('ejsKey').value=s.ejsKey||'';
   $('mailPerOrder').checked=!!s.mailPerOrder; $('mailStart').value=s.mailStart||''; $('mailEnd').value=s.mailEnd||'';
   $('driveScriptUrl').value=s.driveScriptUrl||'';
   $('geminiKey').value=s.geminiKey||'';
-  $('matCompanyUrl').value=s.matCompanyUrl||''; $('matCatalogUrl').value=s.matCatalogUrl||''; $('matCappieUrl').value=s.matCappieUrl||'';
+  $('matCompanyUrl').value=s.matCompanyUrl||''; $('matCatalogUrl').value=s.matCatalogUrl||''; $('matCappieUrl').value=s.matCappieUrl||''; $('matPresskitUrl').value=s.matPresskitUrl||'';
 }
 function syncRepSelect(){
   if($('kRep')) $('kRep').innerHTML='<option value="">담당자 선택</option>'+(db.settings.reps||[]).map(r=>`<option>${esc(r)}</option>`).join('');
