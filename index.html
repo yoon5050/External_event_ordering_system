@@ -176,7 +176,7 @@
 <!-- ════════ 로그인 화면 ════════ -->
 <div id="loginView" style="display:none; text-align:center; padding:120px 20px;">
   <div class="brand" style="font-size:18px; margin-bottom:6px;">lowlit collective</div>
-  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 31</span></p>
+  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 32</span></p>
   <button class="btn btn-dark" style="padding:13px 28px;" onclick="login()">Google 계정으로 로그인</button>
   <p id="loginErr" style="color:var(--red); font-size:12.5px; margin-top:16px;"></p>
 </div>
@@ -486,7 +486,16 @@
       <div id="cardUploadStatus" style="font-size:12px;color:var(--sub);margin-top:8px;"></div>
     </div>
     <div class="card">
-      <h2>🗂️ 등록된 명함 <span class="hint" id="cardCount"></span></h2>
+      <h2>🗂️ 등록된 명함(리드) <span class="hint" id="cardCount"></span></h2>
+      <div class="toolbar">
+        <span style="font-size:12px;color:var(--sub);font-weight:600;">상태</span>
+        <select id="cardFilter" onchange="renderCards()">
+          <option value="">전체</option><option>신규</option><option>상담중</option><option>견적발송</option><option>성사</option><option>보류</option>
+        </select>
+        <span id="cardStatusSummary" style="font-size:12px;color:var(--sub);"></span>
+        <div class="spacer"></div>
+        <button class="btn btn-line btn-sm" onclick="exportCards()">📤 명함 엑셀</button>
+      </div>
       <div id="cardGallery" style="display:flex;flex-direction:column;gap:10px;"></div>
       <div class="empty" id="cardEmpty" style="display:none;">아직 등록된 명함이 없습니다.</div>
     </div>
@@ -577,7 +586,7 @@
   </div>
   </section>
 
-  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 31</div>
+  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 32</div>
 </div>
 </div>
 
@@ -1706,7 +1715,7 @@ function uploadCard(input){
       cv.getContext('2d').drawImage(img,0,0,w,h);
       let q=0.7, dataUrl=cv.toDataURL('image/jpeg',q);
       while(dataUrl.length>900000 && q>0.3){ q-=0.1; dataUrl=cv.toDataURL('image/jpeg',q); }
-      const card={id:'c'+Date.now()+Math.random().toString(36).slice(2,5), eventId:db.currentEventId, ts:nowLocal(), name:'', company:'', title:'', email:'', phone:'', memo:$('cardMemo').value.trim(), img:dataUrl};
+      const card={id:'c'+Date.now()+Math.random().toString(36).slice(2,5), eventId:db.currentEventId, ts:nowLocal(), name:'', company:'', title:'', email:'', phone:'', interest:'', status:'신규', followUp:'', memo:$('cardMemo').value.trim(), img:dataUrl};
       fs.collection('cards').doc(card.id).set(clean(card))
         .then(()=>{ uploadToDrive(card); $('cardMemo').value=''; status.textContent='✅ 업로드 완료'+(db.settings.driveScriptUrl?' · 드라이브 백업됨':''); extractCardInfo(card); })
         .catch(err=>{ status.textContent=''; alert('명함 저장 실패: '+err.message); });
@@ -1717,18 +1726,36 @@ function uploadCard(input){
   };
   reader.readAsDataURL(f);
 }
+const CARD_STATUS=['신규','상담중','견적발송','성사','보류'];
+function cardStatusTint(s){ return ({'상담중':['#e9effb','#3a6fd8'],'견적발송':['#fcf3e2','#c8871a'],'성사':['#e7f6ec','#1f8a4c'],'보류':['#efefed','#999']})[s]||['#efefed','#555']; }
 function renderCards(){
   if(!db.events.length||!ev()) return;
   if(!$('cardGallery')) return;
   $('cardEvName').textContent='· '+ev().name;
-  const list=cardsList();
+  let list=cardsList();
+  const cnt={}; CARD_STATUS.forEach(s=>cnt[s]=0);
+  list.forEach(c=>{ const s=c.status||'신규'; cnt[s]=(cnt[s]||0)+1; });
+  if($('cardStatusSummary')) $('cardStatusSummary').textContent=CARD_STATUS.map(s=>s+' '+cnt[s]).join(' · ');
   $('cardCount').textContent=list.length?list.length+'명':'';
+  const flt=$('cardFilter')?$('cardFilter').value:'';
+  if(flt) list=list.filter(c=>(c.status||'신규')===flt);
   const g=$('cardGallery'); g.innerHTML='';
   $('cardEmpty').style.display=list.length?'none':'';
+  const today0=today();
   list.forEach(c=>{
-    g.insertAdjacentHTML('beforeend',`<div style="display:flex;gap:12px;border:1px solid var(--line);border-radius:10px;padding:10px;background:#fff;align-items:flex-start;">
+    const st=c.status||'신규'; const tint=cardStatusTint(st);
+    const overdue=c.followUp && c.followUp<=today0 && st!=='성사' && st!=='보류';
+    const opts=CARD_STATUS.map(s=>`<option ${s===st?'selected':''}>${s}</option>`).join('');
+    g.insertAdjacentHTML('beforeend',`<div style="display:flex;gap:12px;border:1px solid ${overdue?'var(--red)':'var(--line)'};border-radius:10px;padding:10px;background:#fff;align-items:flex-start;">
       <img src="${c.img}" onclick="openCardImage('${c.id}')" title="크게 보기" style="width:132px;height:84px;object-fit:cover;border-radius:6px;cursor:zoom-in;flex-shrink:0;background:#f4f4f2;">
       <div style="flex:1;min-width:0;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">
+          <select id="cf_status_${c.id}" onchange="saveCard('${c.id}')" style="width:auto;font-weight:700;background:${tint[0]};color:${tint[1]};border-color:${tint[0]};">${opts}</select>
+          <span style="font-size:12px;color:var(--sub);">후속</span>
+          <input type="date" id="cf_followUp_${c.id}" value="${c.followUp||''}" onchange="saveCard('${c.id}')" style="width:auto;">
+          ${overdue?'<span class="pill p-red">⏰ 후속 필요</span>':''}
+          <span style="font-size:10.5px;color:var(--sub);margin-left:auto;">${c.ts.slice(0,16).replace('T',' ')}</span>
+        </div>
         <div class="row" style="gap:8px;margin-bottom:6px;">
           <div style="flex:1;min-width:90px;"><label class="f">이름</label><input type="text" id="cf_name_${c.id}" value="${esc(c.name||'')}"></div>
           <div style="flex:1.5;min-width:120px;"><label class="f">회사/부서</label><input type="text" id="cf_company_${c.id}" value="${esc(c.company||'')}"></div>
@@ -1738,16 +1765,26 @@ function renderCards(){
           <div style="flex:1.5;min-width:140px;"><label class="f">이메일</label><input type="text" id="cf_email_${c.id}" value="${esc(c.email||'')}"></div>
           <div style="flex:1;min-width:120px;"><label class="f">연락처</label><input type="text" id="cf_phone_${c.id}" value="${esc(c.phone||'')}"></div>
         </div>
-        <div><label class="f">메모</label><textarea id="cf_memo_${c.id}" style="min-height:44px;">${esc(c.memo||'')}</textarea></div>
+        <div style="margin-bottom:6px;"><label class="f">관심 품목</label><input type="text" id="cf_interest_${c.id}" value="${esc(c.interest||'')}" placeholder="예: 위뜨 램프 도매, 캐피블럭 대량"></div>
+        <div><label class="f">상담 메모</label><textarea id="cf_memo_${c.id}" style="min-height:44px;">${esc(c.memo||'')}</textarea></div>
         <div style="display:flex;gap:6px;margin-top:7px;align-items:center;flex-wrap:wrap;">
           <button class="btn btn-dark btn-sm" id="cardsave_${c.id}" onclick="saveCard('${c.id}')">저장</button>
           <a class="btn btn-line btn-sm" href="${c.img}" download="명함_${esc((c.name||c.ts.slice(0,10)))}.jpg" style="text-decoration:none;">⬇️ 이미지</a>
           <button class="btn btn-red btn-sm" onclick="delCard('${c.id}')">삭제</button>
-          <span style="font-size:10.5px;color:var(--sub);margin-left:auto;">${c.ts.slice(0,16).replace('T',' ')}</span>
         </div>
       </div>
     </div>`);
   });
+}
+function exportCards(){
+  const list=cardsList();
+  if(!list.length){ alert('등록된 명함이 없습니다.'); return; }
+  const rows=[['상태','이름','회사/부서','직함','이메일','연락처','관심품목','상담메모','후속연락일','등록일시']];
+  list.forEach(c=>rows.push([c.status||'신규',c.name||'',c.company||'',c.title||'',c.email||'',c.phone||'',c.interest||'',c.memo||'',c.followUp||'',c.ts?c.ts.slice(0,16).replace('T',' '):'']));
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), '명함');
+  const evn=ev().name.replace(/[\\/:*?"<>|]/g,'');
+  XLSX.writeFile(wb, `${evn}_명함리드_${today()}.xlsx`);
 }
 function delCard(id){
   if(!confirm('이 명함을 삭제할까요?')) return;
@@ -1759,8 +1796,9 @@ function saveCard(id){
   const c=db.cards.find(x=>x.id===id); if(!c) return;
   const g=f=>{ const el=document.getElementById('cf_'+f+'_'+id); return el?el.value.trim():(c[f]||''); };
   c.name=g('name'); c.company=g('company'); c.title=g('title'); c.email=g('email'); c.phone=g('phone'); c.memo=g('memo');
-  if(fs) fs.collection('cards').doc(id).update({name:c.name,company:c.company,title:c.title,email:c.email,phone:c.phone,memo:c.memo})
-    .then(()=>{ const b=document.getElementById('cardsave_'+id); if(b){ const o=b.textContent; b.textContent='저장됨 ✓'; setTimeout(()=>{ b.textContent=o; },1200); } })
+  c.interest=g('interest'); c.status=g('status')||'신규'; c.followUp=g('followUp');
+  if(fs) fs.collection('cards').doc(id).update({name:c.name,company:c.company,title:c.title,email:c.email,phone:c.phone,memo:c.memo,interest:c.interest,status:c.status,followUp:c.followUp})
+    .then(()=>{ const b=document.getElementById('cardsave_'+id); if(b){ const o=b.textContent; b.textContent='저장됨 ✓'; setTimeout(()=>{ b.textContent=o; },1200); } renderCards(); })
     .catch(e=>alert('명함 저장 실패: '+e.message));
 }
 function openCardImage(id){
