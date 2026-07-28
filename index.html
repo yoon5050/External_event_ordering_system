@@ -176,7 +176,7 @@
 <!-- ════════ 로그인 화면 ════════ -->
 <div id="loginView" style="display:none; text-align:center; padding:120px 20px;">
   <div class="brand" style="font-size:18px; margin-bottom:6px;">lowlit collective</div>
-  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 37</span></p>
+  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 39</span></p>
   <button class="btn btn-dark" style="padding:13px 28px;" onclick="login()">Google 계정으로 로그인</button>
   <p id="loginErr" style="color:var(--red); font-size:12.5px; margin-top:16px;"></p>
 </div>
@@ -430,6 +430,15 @@
     </div>
 
     <div class="card">
+      <h2>✉️ 후속 메일(고객 발송) 설정 <span class="hint">명함·상담 자료 메일 인사말·서명에 사용</span></h2>
+      <div class="row">
+        <div><label class="f">행사명(메일 표기)</label><input type="text" id="mailFairName" placeholder="예: 더메종 페어 (비우면 전시명)" onchange="saveSettings()"></div>
+      </div>
+      <div class="row"><div><label class="f">부스 사진 이미지 링크</label><input type="text" id="boothPhotoUrl" placeholder="https:// 이미지 직접 링크(.jpg/.png)" onchange="saveSettings()"></div></div>
+      <p style="font-size:11.5px;color:var(--sub);margin-top:8px;line-height:1.7;">자료 메일은 '전시에서 인사드린 …' 인사말 → 부스 사진 → 회사 소개 → 요청 자료 → 맺음말 순으로 자동 구성됩니다. 여기 값만 채우면 돼요. (부스 사진은 <b>이미지 자체 링크</b>여야 표시됩니다. 구글드라이브 '공유 링크'는 안 되고, 이미지 직접 URL이 필요해요.)</p>
+    </div>
+
+    <div class="card">
       <h2>📧 메일 알림 <span class="hint">무료 EmailJS 사용 · 최초 1회 키 입력 필요</span></h2>
       <div class="row">
         <div><label class="f">받는 사람 이메일(내부 알림) *</label><input type="text" id="mailTo" placeholder="예: lowlitco@naver.com" onchange="saveSettings()"></div>
@@ -502,6 +511,9 @@
         <input type="file" id="cardFile" accept="image/*" capture="environment" style="display:none;" onchange="uploadCardToForm(this)">
         <button class="btn btn-dark btn-sm" onclick="document.getElementById('cardFile').click()">📷 명함 촬영/사진 첨부</button>
         <span id="cardUploadStatus" style="font-size:12px;color:var(--sub);"></span>
+      </div>
+      <div class="row">
+        <div style="max-width:220px;"><label class="f">담당자(등록자)</label><select id="regRep"><option value="">담당자 선택</option></select></div>
       </div>
       <div class="row">
         <div><label class="f">이름</label><input type="text" id="regName"></div>
@@ -630,7 +642,7 @@
   </div>
   </section>
 
-  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 37</div>
+  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 39</div>
 </div>
 </div>
 
@@ -736,7 +748,8 @@ const DEFAULT_SETTINGS={
   mailPerOrder:false, mailStart:'', mailEnd:'',
   driveScriptUrl:'', geminiKey:'',
   reps:['재식','윤이','다움','윤지','양호','순호'],
-  matCompanyUrl:'', matCatalogUrl:'', matCappieUrl:'', matPresskitUrl:''
+  matCompanyUrl:'', matCatalogUrl:'', matCappieUrl:'', matPresskitUrl:'',
+  mailFairName:'', boothPhotoUrl:'', repEmails:{}
 };
 let db={events:[], currentEventId:null, orders:[], cards:[], settings:Object.assign({},DEFAULT_SETTINGS)};
 let fs=null, auth=null, configReady=false, started=false;
@@ -828,6 +841,7 @@ function saveSettings(){
   s.driveScriptUrl=$('driveScriptUrl').value.trim();
   s.geminiKey=$('geminiKey').value.trim();
   s.matCompanyUrl=$('matCompanyUrl').value.trim(); s.matCatalogUrl=$('matCatalogUrl').value.trim(); s.matCappieUrl=$('matCappieUrl').value.trim(); s.matPresskitUrl=$('matPresskitUrl').value.trim();
+  s.mailFairName=$('mailFairName').value.trim(); s.boothPhotoUrl=$('boothPhotoUrl').value.trim();
   save();
 }
 
@@ -1564,11 +1578,11 @@ function mailReady(){
   const s=db.settings;
   return !!(typeof emailjs!=='undefined' && s.ejsService && s.ejsTemplate && s.ejsKey && s.mailTo);
 }
-function sendMail(subject,message,toEmail,templateId){
+function sendMail(subject,message,toEmail,templateId,replyTo){
   const s=db.settings;
   if(!mailReady() && !toEmail) return Promise.reject(new Error('메일 설정이 완료되지 않았습니다. 설정에서 EmailJS 정보와 받는 이메일을 입력해 주세요.'));
   return emailjs.send(s.ejsService, (templateId||s.ejsTemplate), {
-    to_email:(toEmail||s.mailTo), from_name:s.mailFrom||'LOWLIT COLLECTIVE', from_email:(s.mailFromEmail||''), reply_to:(s.mailFromEmail||s.coEmail||''), subject, message
+    to_email:(toEmail||s.mailTo), from_name:s.mailFrom||'LOWLIT COLLECTIVE', from_email:(s.mailFromEmail||''), reply_to:(replyTo||s.mailFromEmail||s.coEmail||''), subject, message
   }, {publicKey:s.ejsKey});
 }
 function mailWrap(inner,subtitle){
@@ -1787,12 +1801,14 @@ async function extractCardToForm(dataUrl){
 }
 function resetLeadForm(){
   ['regName','regCompany','regTitle','regEmail','regPhone','regMemo','mat_etc_text'].forEach(i=>{ if($(i)) $(i).value=''; });
+  if($('regRep')) $('regRep').value='';
   ['mat_company','mat_catalog','mat_cappie','mat_presskit','mat_etc'].forEach(i=>{ if($(i)) $(i).checked=false; });
   pendingCardImg='';
 }
 function registerLead(send){
   const gv=id=>{ const el=$(id); return el?el.value.trim():''; };
   const name=gv('regName'), company=gv('regCompany'), title=gv('regTitle'), email=gv('regEmail'), phone=gv('regPhone'), memo=gv('regMemo');
+  const rep=$('regRep')?$('regRep').value:'';
   const mats=[];
   if($('mat_company').checked) mats.push('회사소개서');
   if($('mat_catalog').checked) mats.push('제품카탈로그');
@@ -1802,34 +1818,76 @@ function registerLead(send){
   if(!name&&!company&&!email&&!phone&&!memo&&!pendingCardImg){ alert('명함 사진을 첨부하거나 내용을 입력해 주세요.'); return; }
   if(!fs){ alert('서버 연결을 확인해 주세요.'); return; }
   const memoFull=memo+((mats.length)?((memo?'\n':'')+'📎 발송자료: '+mats.join(', ')):'');
-  const card={id:'c'+Date.now()+Math.random().toString(36).slice(2,5), eventId:db.currentEventId, ts:nowLocal(), name, company, title, email, phone, interest:'', status:'신규', followUp:'', memo:memoFull, img:pendingCardImg||''};
+  const card={id:'c'+Date.now()+Math.random().toString(36).slice(2,5), eventId:db.currentEventId, ts:nowLocal(), name, company, title, email, phone, rep, interest:'', status:'신규', followUp:'', memo:memoFull, mail1Sent:'', mail2Sent:'', img:pendingCardImg||''};
   fs.collection('cards').doc(card.id).set(clean(card)).then(()=>{ if(card.img) uploadToDrive(card); }).catch(e=>alert('저장 실패: '+e.message));
   db.cards.unshift(card);
   const st=$('cardUploadStatus');
   if(send){
-    if(!email){ alert('명함은 등록됐어요. 다만 이메일 주소가 없어 자료 메일은 못 보냈어요.'); }
-    else if(!mats.length){ alert('명함은 등록됐어요. 보낼 자료를 체크하지 않아 메일은 발송하지 않았어요.'); }
-    else { sendLeadMaterials(name, email, mats); }
-  } else if(st){ st.textContent='✅ 등록 완료'; setTimeout(()=>{ if(st.textContent.indexOf('등록 완료')>=0) st.textContent=''; },2000); }
+    if(!email){ alert('명함은 등록됐어요. 다만 이메일 주소가 없어 1차 자료 메일은 못 보냈어요. (목록에서 이메일 채운 뒤 발송 가능)'); }
+    else if(!mats.length){ alert('명함은 등록됐어요. 보낼 자료를 체크하지 않아 메일은 발송하지 않았어요. (목록에서 1차 메일 보내기 가능)'); }
+    else { if(st) st.textContent='메일 발송 중…'; sendLeadMail(card, mats, 1).then(()=>{ if(st){ st.textContent='✅ 등록 + 1차 자료 메일 발송 완료 ('+email+')'; setTimeout(()=>{ if(st.textContent.indexOf('발송 완료')>=0) st.textContent=''; },3500); } }).catch(e=>{ if(e&&(e.text||e.message)) alert('메일 발송 실패: '+(e.text||e.message)); if(st) st.textContent=''; }); }
+  } else if(st){ st.textContent='✅ 등록 완료 · 1차 메일은 목록에서 발송하세요'; setTimeout(()=>{ if(st.textContent.indexOf('등록 완료')>=0) st.textContent=''; },3000); }
   resetLeadForm(); renderCards();
 }
-function sendLeadMaterials(name, email, mats){
+function matUrl(m){ const s=db.settings; return m==='회사소개서'?s.matCompanyUrl : (m==='제품카탈로그'?s.matCatalogUrl : (m.indexOf('캐피블럭')>=0?s.matCappieUrl : ((m.indexOf('프레스킷')>=0||m.indexOf('Press')>=0)?s.matPresskitUrl:''))); }
+function leadEmailHtml(lead, mats){
   const s=db.settings;
-  if(!(typeof emailjs!=='undefined'&&s.ejsService&&s.ejsKey)){ alert('명함은 등록됐어요. 메일 발송은 설정 → 메일 알림의 EmailJS 정보가 필요합니다.'); return; }
-  if(!s.ejsTemplateCust){ alert('명함은 등록됐어요.\n고객에게 자료를 보내려면 별도의 "고객 발송용 Template ID"(To를 {{to_email}}로 설정)를 만들어 설정 → 메일 알림에 입력해 주세요. 주문 알림 템플릿은 내부 수신 전용이라 고객에게 보낼 수 없어요.'); return; }
-  const urlFor=m=> m==='회사소개서'?s.matCompanyUrl : (m==='제품카탈로그'?s.matCatalogUrl : (m.indexOf('캐피블럭')>=0?s.matCappieUrl : ((m.indexOf('프레스킷')>=0||m.indexOf('Press')>=0)?s.matPresskitUrl:'')));
-  const items=mats.map(m=>{ const u=urlFor(m); return `<div style="border:1px solid #eeeeee;border-radius:8px;padding:12px 14px;margin-bottom:8px;">`+
-      `<div style="font-size:13px;font-weight:bold;color:#111111;">${esc(m)}</div>`+
-      (u?`<a href="${esc(u)}" style="display:inline-block;margin-top:8px;background:#111111;color:#ffffff;text-decoration:none;font-size:12px;font-weight:bold;padding:8px 16px;border-radius:6px;">자료 보기 →</a>`:`<div style="font-size:12px;color:#999999;margin-top:5px;">담당자가 별도로 전달드립니다.</div>`)+
-    `</div>`; }).join('');
-  const inner=mailTitle('요청하신 자료를 보내드립니다')+
-    `<div style="font-size:13px;color:#333333;line-height:1.75;">${esc(name||'')} 님, 안녕하세요.<br>LOWLIT COLLECTIVE입니다. 전시에서 상담해 주셔서 감사합니다.<br>요청하신 자료를 아래에서 확인해 주세요.</div>`+
-    `<div style="margin-top:14px;">${items}</div>`+
-    `<div style="font-size:12px;color:#888888;margin-top:16px;line-height:1.7;border-top:1px solid #eeeeee;padding-top:12px;">LOWLIT COLLECTIVE<br>${esc(s.coEmail||'')}${s.coWeb?' · '+esc(s.coWeb):''}</div>`;
-  const st=$('cardUploadStatus'); if(st) st.textContent='메일 발송 중…';
-  sendMail('[LOWLIT COLLECTIVE] 요청하신 자료 안내', mailWrap(inner,'자료 안내'), email, s.ejsTemplateCust)
-    .then(()=>{ if(st){ st.textContent='✅ 등록 + 자료 메일 발송 완료 ('+email+')'; setTimeout(()=>{ if(st.textContent.indexOf('발송 완료')>=0) st.textContent=''; },3500); } })
-    .catch(e=>{ alert('명함은 등록됐어요. 메일 발송 실패: '+(e.text||e.message||e)); if(st) st.textContent=''; });
+  const sign=(s.mailSignName||'').trim();
+  const fair=(s.mailFairName||ev().name||'').trim();
+  const nm=((lead&&lead.name)||'').trim(), tt=((lead&&lead.title)||'').trim();
+  const greet= nm? `안녕하세요, ${esc(nm)}${tt?' '+esc(tt):''}님` : '안녕하세요,';
+  const P='font-size:14px;color:#222222;line-height:1.75;margin:0 0 14px;';
+  const booth= s.boothPhotoUrl? `<img src="${esc(s.boothPhotoUrl)}" alt="LOWLIT 부스" style="width:100%;border-radius:8px;margin:4px 0 16px;display:block;">` : '';
+  const items= (mats&&mats.length)? (`<p style="${P}font-weight:bold;margin-bottom:6px;">요청하신 자료를 아래에서 확인해 주세요.</p>`+mats.map(m=>{ const u=matUrl(m); return `<div style="border:1px solid #eeeeee;border-radius:8px;padding:12px 14px;margin-bottom:8px;"><div style="font-size:13px;font-weight:bold;color:#111111;">${esc(m)}</div>${u?`<a href="${esc(u)}" style="display:inline-block;margin-top:8px;background:#111111;color:#ffffff;text-decoration:none;font-size:12px;font-weight:bold;padding:8px 16px;border-radius:6px;">자료 보기 →</a>`:`<div style="font-size:12px;color:#999999;margin-top:5px;">담당자가 별도로 전달드립니다.</div>`}</div>`; }).join('')) : '';
+  return `<div style="max-width:600px;margin:0 auto;padding:24px 22px;background:#ffffff;font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;">`+
+    `<p style="${P}">${greet}<br>${esc(fair)}에서 인사 나누었던 로우리트 콜렉티브입니다.<br>바쁘신 와중에 저희 부스에 들러 관심 가져주셔서 다시 한번 감사드립니다.</p>`+
+    booth+
+    `<p style="${P}">로우리트 콜렉티브는 기획·디자인부터 자체 제작까지 직접 아우르는 스튜디오로, 버려지는 소재에 새로운 쓰임을 더하는 리퍼포징(repurposing)을 기반으로 오래 쓰는 조명과 가구를 선보이고 있습니다.<br>iF·GD·Dezeen 등 국내외 어워드에서 디자인성을 인정받았으며, 공간의 분위기를 살리는 조명·가구를 다양한 규모로 제안드릴 수 있습니다.</p>`+
+    items+
+    `<p style="${P}">운영하시는 공간에 어울리는 제품이나 함께 해볼 만한 부분이 있다면 언제든 편하게 말씀해 주세요.<br>필요하시면 공간에 맞춘 제안도 도와드리겠습니다.</p>`+
+    `<div style="border-top:1px solid #eeeeee;margin-top:18px;padding-top:14px;font-size:12.5px;color:#888888;line-height:1.7;">로우리트 콜렉티브 (LOWLIT COLLECTIVE)${(s.mailFromEmail||s.coEmail)?'<br>'+esc(s.mailFromEmail||s.coEmail):''}${s.coWeb?' · '+esc(s.coWeb):''}</div>`+
+  `</div>`;
+}
+function leadRepReply(card){ return (db.settings.repEmails||{})[(card&&card.rep)||'']||''; }
+function leadEmail2Html(lead, mats){
+  const s=db.settings;
+  const nm=((lead&&lead.name)||'').trim(), tt=((lead&&lead.title)||'').trim();
+  const greet= nm? `안녕하세요, ${esc(nm)}${tt?' '+esc(tt):''}님` : '안녕하세요,';
+  const P='font-size:14px;color:#222222;line-height:1.75;margin:0 0 14px;';
+  const items= (mats&&mats.length)? (`<p style="${P}font-weight:bold;margin-bottom:6px;">함께 보시면 좋은 자료를 첨부드립니다.</p>`+mats.map(m=>{ const u=matUrl(m); return `<div style="border:1px solid #eeeeee;border-radius:8px;padding:12px 14px;margin-bottom:8px;"><div style="font-size:13px;font-weight:bold;color:#111111;">${esc(m)}</div>${u?`<a href="${esc(u)}" style="display:inline-block;margin-top:8px;background:#111111;color:#ffffff;text-decoration:none;font-size:12px;font-weight:bold;padding:8px 16px;border-radius:6px;">자료 보기 →</a>`:``}</div>`; }).join('')) : '';
+  return `<div style="max-width:600px;margin:0 auto;padding:24px 22px;background:#ffffff;font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;">`+
+    `<p style="${P}">${greet}<br>로우리트 콜렉티브입니다. 앞서 전달드린 소개와 자료는 잘 확인하셨는지요?</p>`+
+    `<p style="${P}">혹시 검토 중 궁금하신 점이나, 운영하시는 공간에 맞춰 제안이 필요하신 부분이 있으면 편하게 회신 주세요. 샘플 확인이나 미팅도 언제든 도와드리겠습니다.</p>`+
+    items+
+    `<p style="${P}">좋은 인연으로 이어지길 바라며, 다시 한번 관심 가져주셔서 감사드립니다.</p>`+
+    `<div style="border-top:1px solid #eeeeee;margin-top:18px;padding-top:14px;font-size:12.5px;color:#888888;line-height:1.7;">로우리트 콜렉티브 (LOWLIT COLLECTIVE)${(s.mailFromEmail||s.coEmail)?'<br>'+esc(s.mailFromEmail||s.coEmail):''}${s.coWeb?' · '+esc(s.coWeb):''}</div>`+
+  `</div>`;
+}
+function sendLeadMail(card, mats, stage){
+  const s=db.settings;
+  if(!(typeof emailjs!=='undefined'&&s.ejsService&&s.ejsKey)){ alert('메일 발송은 설정 → 메일 알림의 EmailJS 정보가 필요합니다.'); return Promise.reject(new Error('mail not ready')); }
+  if(!s.ejsTemplateCust){ alert('고객 발송용 Template ID(To를 {{to_email}}로 설정)를 설정 → 메일 알림에 입력해 주세요.'); return Promise.reject(new Error('no cust template')); }
+  if(!card.email){ alert('이 리드에 이메일이 없어 발송할 수 없어요. 이메일을 입력·저장한 뒤 다시 시도해 주세요.'); return Promise.reject(new Error('no email')); }
+  const fair=(s.mailFairName||ev().name||'');
+  const html= stage===2 ? leadEmail2Html(card, mats) : leadEmailHtml(card, mats);
+  const subject= stage===2 ? `[로우리트콜렉티브] ${fair} 이후 다시 인사드립니다 — 추가 제안드려요` : `[로우리트콜렉티브] ${fair}에서 인사드린 로우리트입니다 — 자료 송부드립니다`;
+  return sendMail(subject, html, card.email, s.ejsTemplateCust, leadRepReply(card))
+    .then(()=>{
+      const c=db.cards.find(x=>x.id===card.id)||card;
+      if(stage===2){ c.mail2Sent=today(); if(fs) fs.collection('cards').doc(c.id).update({mail2Sent:c.mail2Sent}); }
+      else { c.mail1Sent=today(); if(fs) fs.collection('cards').doc(c.id).update({mail1Sent:c.mail1Sent}); }
+      renderCards();
+    });
+}
+function sendLeadFromList(id, stage){
+  const c=db.cards.find(x=>x.id===id); if(!c) return;
+  const mats=[];
+  const chk=(k,label)=>{ const el=document.getElementById('lc_'+k+'_'+id); if(el&&el.checked) mats.push(label); };
+  chk('company','회사소개서'); chk('catalog','제품카탈로그'); chk('cappie','캐피블럭 소개서(B2B)'); chk('presskit','프레스킷(Press Kit)');
+  if(!c.email){ alert('이메일이 없어요. 이메일 칸을 채우고 저장한 뒤 다시 시도해 주세요.'); return; }
+  if(!mats.length){ if(!confirm((stage===2?'2차 컨택':'1차')+' 메일을 자료 없이 인사말만 보낼까요?')) return; }
+  if(!confirm((stage===2?'2차 컨택':'1차 자료')+' 메일을 '+c.email+' 로 보낼까요?')) return;
+  sendLeadMail(c, mats, stage).then(()=>alert((stage===2?'2차':'1차')+' 메일을 보냈습니다 ✅')).catch(e=>{ if(e&&(e.text||e.message)&&String(e.message).indexOf('not ready')<0&&String(e.message).indexOf('template')<0&&String(e.message).indexOf('no email')<0) alert('발송 실패: '+(e.text||e.message)); });
 }
 function uploadToDrive(card){
   const url=db.settings.driveScriptUrl;
@@ -1874,6 +1932,7 @@ function renderCards(){
   if(!db.events.length||!ev()) return;
   if(!$('cardGallery')) return;
   $('cardEvName').textContent='· '+ev().name;
+  syncRepSelect();
   let list=cardsList();
   const cnt={}; CARD_STATUS.forEach(s=>cnt[s]=0);
   list.forEach(c=>{ const s=c.status||'신규'; cnt[s]=(cnt[s]||0)+1; });
@@ -1909,6 +1968,23 @@ function renderCards(){
         </div>
         <div style="margin-bottom:6px;"><label class="f">관심 품목</label><input type="text" id="cf_interest_${c.id}" value="${esc(c.interest||'')}" placeholder="예: 위뜨 램프 도매, 캐피블럭 대량"></div>
         <div><label class="f">상담 메모</label><textarea id="cf_memo_${c.id}" style="min-height:44px;">${esc(c.memo||'')}</textarea></div>
+        <div style="background:#fafaf8;border:1px solid #eee;border-radius:8px;padding:8px 10px;margin-top:8px;">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
+            <span class="pill ${c.mail1Sent?'p-green':'p-amber'}">${c.mail1Sent?('1차 발송 ✅ '+c.mail1Sent):'⚠️ 1차 메일 미발송'}</span>
+            ${c.mail2Sent?`<span class="pill p-blue">2차 발송 ✅ ${c.mail2Sent}</span>`:''}
+            <span style="font-size:11.5px;color:var(--sub);">담당자: ${esc(c.rep)||'-'}</span>
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;font-size:12.5px;margin-bottom:6px;">
+            <label style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="lc_company_${c.id}"> 회사소개서</label>
+            <label style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="lc_catalog_${c.id}"> 제품카탈로그</label>
+            <label style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="lc_cappie_${c.id}"> 캐피블럭(B2B)</label>
+            <label style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="lc_presskit_${c.id}"> 프레스킷</label>
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <button class="btn ${c.mail1Sent?'btn-line':'btn-dark'} btn-sm" onclick="sendLeadFromList('${c.id}',1)">${c.mail1Sent?'1차 재발송':'1차 메일 보내기'}</button>
+            <button class="btn btn-line btn-sm" onclick="sendLeadFromList('${c.id}',2)">2차 컨택 메일</button>
+          </div>
+        </div>
         <div style="display:flex;gap:6px;margin-top:7px;align-items:center;flex-wrap:wrap;">
           <button class="btn btn-dark btn-sm" id="cardsave_${c.id}" onclick="saveCard('${c.id}')">저장</button>
           ${c.img?`<a class="btn btn-line btn-sm" href="${c.img}" download="명함_${esc((c.name||c.ts.slice(0,10)))}.jpg" style="text-decoration:none;">⬇️ 이미지</a>`:``}
@@ -1921,8 +1997,8 @@ function renderCards(){
 function exportCards(){
   const list=cardsList();
   if(!list.length){ alert('등록된 명함이 없습니다.'); return; }
-  const rows=[['상태','이름','회사/부서','직함','이메일','연락처','관심품목','상담메모','후속연락일','등록일시']];
-  list.forEach(c=>rows.push([c.status||'신규',c.name||'',c.company||'',c.title||'',c.email||'',c.phone||'',c.interest||'',c.memo||'',c.followUp||'',c.ts?c.ts.slice(0,16).replace('T',' '):'']));
+  const rows=[['상태','담당자','이름','회사/부서','직함','이메일','연락처','관심품목','상담메모','1차발송','2차발송','후속연락일','등록일시']];
+  list.forEach(c=>rows.push([c.status||'신규',c.rep||'',c.name||'',c.company||'',c.title||'',c.email||'',c.phone||'',c.interest||'',c.memo||'',c.mail1Sent||'',c.mail2Sent||'',c.followUp||'',c.ts?c.ts.slice(0,16).replace('T',' '):'']));
   const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), '명함');
   const evn=ev().name.replace(/[\\/:*?"<>|]/g,'');
@@ -2066,15 +2142,23 @@ function initSettings(){
   $('driveScriptUrl').value=s.driveScriptUrl||'';
   $('geminiKey').value=s.geminiKey||'';
   $('matCompanyUrl').value=s.matCompanyUrl||''; $('matCatalogUrl').value=s.matCatalogUrl||''; $('matCappieUrl').value=s.matCappieUrl||''; $('matPresskitUrl').value=s.matPresskitUrl||'';
+  $('mailFairName').value=s.mailFairName||''; $('boothPhotoUrl').value=s.boothPhotoUrl||'';
 }
 function syncRepSelect(){
-  if($('kRep')) $('kRep').innerHTML='<option value="">담당자 선택</option>'+(db.settings.reps||[]).map(r=>`<option>${esc(r)}</option>`).join('');
+  const opts='<option value="">담당자 선택</option>'+(db.settings.reps||[]).map(r=>`<option>${esc(r)}</option>`).join('');
+  if($('kRep')) $('kRep').innerHTML=opts;
+  if($('regRep')) $('regRep').innerHTML=opts;
 }
 function renderReps(){
   const box=$('repList'); if(!box) return;
-  const reps=db.settings.reps||[];
-  box.innerHTML=reps.length?reps.map((r,i)=>`<span class="pill p-gray" style="display:inline-flex;align-items:center;gap:6px;font-size:13px;padding:6px 12px;">${esc(r)} <span onclick="delRep(${i})" title="삭제" style="cursor:pointer;color:var(--red);font-weight:800;">✕</span></span>`).join(''):'<span style="color:var(--sub);font-size:12.5px;">담당자가 없습니다. 아래에서 추가하세요.</span>';
+  const reps=db.settings.reps||[], em=db.settings.repEmails||{};
+  box.innerHTML=reps.length?reps.map((r,i)=>`<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;flex-wrap:wrap;">
+    <span style="min-width:64px;font-weight:700;font-size:13.5px;">${esc(r)}</span>
+    <input type="text" value="${esc(em[r]||'')}" placeholder="이 담당자 이메일 (회신용·선택)" style="flex:1;min-width:200px;max-width:320px;" onchange="setRepEmail(${i}, this.value)">
+    <button class="btn btn-red btn-sm" onclick="delRep(${i})">삭제</button>
+  </div>`).join(''):'<span style="color:var(--sub);font-size:12.5px;">담당자가 없습니다. 아래에서 추가하세요.</span>';
 }
+function setRepEmail(i,val){ const reps=db.settings.reps||[]; const nm=reps[i]; if(!nm) return; db.settings.repEmails=db.settings.repEmails||{}; db.settings.repEmails[nm]=(val||'').trim(); save(); }
 function addRep(){
   const el=$('newRep'); const v=(el.value||'').trim(); if(!v) return;
   db.settings.reps=db.settings.reps||[];
@@ -2086,7 +2170,7 @@ function delRep(i){
   const reps=db.settings.reps||[];
   if(i<0||i>=reps.length) return;
   if(!confirm(`'${reps[i]}' 담당자를 목록에서 삭제할까요?`)) return;
-  reps.splice(i,1); save(); renderReps(); syncRepSelect();
+  const _nm=reps[i]; reps.splice(i,1); if(db.settings.repEmails) delete db.settings.repEmails[_nm]; save(); renderReps(); syncRepSelect();
 }
 function renderAll(resetTab=true){
   if(!db.events.length||!ev()) return;
