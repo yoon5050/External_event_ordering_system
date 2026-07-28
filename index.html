@@ -176,7 +176,7 @@
 <!-- ════════ 로그인 화면 ════════ -->
 <div id="loginView" style="display:none; text-align:center; padding:120px 20px;">
   <div class="brand" style="font-size:18px; margin-bottom:6px;">lowlit collective</div>
-  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 36</span></p>
+  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 37</span></p>
   <button class="btn btn-dark" style="padding:13px 28px;" onclick="login()">Google 계정으로 로그인</button>
   <p id="loginErr" style="color:var(--red); font-size:12.5px; margin-top:16px;"></p>
 </div>
@@ -439,8 +439,11 @@
       <p style="font-size:11.5px;color:var(--sub);margin:-4px 0 8px;line-height:1.7;">※ 실제 발신 주소는 EmailJS에 연결한 이메일 계정으로 나갑니다. 회사 주소로 보이게 하려면 EmailJS 서비스에 회사 메일을 연결하거나, 여기 '보내는/회신 이메일'을 넣고 템플릿의 Reply-To를 <code>{{reply_to}}</code>로 지정하세요.</p>
       <div class="row">
         <div><label class="f">EmailJS Service ID</label><input type="text" id="ejsService" onchange="saveSettings()"></div>
-        <div><label class="f">EmailJS Template ID</label><input type="text" id="ejsTemplate" onchange="saveSettings()"></div>
+        <div><label class="f">주문 알림 Template ID <span style="font-weight:400;color:var(--sub);">(내부 수신용)</span></label><input type="text" id="ejsTemplate" onchange="saveSettings()"></div>
         <div><label class="f">EmailJS Public Key</label><input type="text" id="ejsKey" onchange="saveSettings()"></div>
+      </div>
+      <div class="row">
+        <div><label class="f">고객 발송용 Template ID <span style="font-weight:400;color:var(--sub);">(명함·상담 자료 메일 · To를 {{to_email}} 로)</span></label><input type="text" id="ejsTemplateCust" placeholder="고객에게 보내는 별도 템플릿 ID (없으면 자료 메일 발송 안 됨)" onchange="saveSettings()"></div>
       </div>
       <label class="consent" style="cursor:pointer;">
         <input type="checkbox" id="mailPerOrder" onchange="saveSettings()">
@@ -627,7 +630,7 @@
   </div>
   </section>
 
-  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 36</div>
+  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 37</div>
 </div>
 </div>
 
@@ -729,7 +732,7 @@ const DEFAULT_SETTINGS={
   shipNote:DEFAULT_SHIPNOTE,
   privacyText:DEFAULT_PRIVACY,
   prodNotice:DEFAULT_NOTICE,
-  mailTo:'', mailFrom:'LOWLIT COLLECTIVE', mailFromEmail:'', ejsService:'', ejsTemplate:'', ejsKey:'',
+  mailTo:'', mailFrom:'LOWLIT COLLECTIVE', mailFromEmail:'', ejsService:'', ejsTemplate:'', ejsTemplateCust:'', ejsKey:'',
   mailPerOrder:false, mailStart:'', mailEnd:'',
   driveScriptUrl:'', geminiKey:'',
   reps:['재식','윤이','다움','윤지','양호','순호'],
@@ -820,7 +823,7 @@ function saveSettings(){
   s.coEmail=$('coEmail').value;
   s.shipNote=$('shipNote').value; s.privacyText=$('privacyText').value; s.prodNotice=$('prodNotice').value;
   s.mailTo=$('mailTo').value.trim(); s.mailFrom=$('mailFrom').value.trim(); s.mailFromEmail=$('mailFromEmail').value.trim();
-  s.ejsService=$('ejsService').value.trim(); s.ejsTemplate=$('ejsTemplate').value.trim(); s.ejsKey=$('ejsKey').value.trim();
+  s.ejsService=$('ejsService').value.trim(); s.ejsTemplate=$('ejsTemplate').value.trim(); s.ejsTemplateCust=$('ejsTemplateCust').value.trim(); s.ejsKey=$('ejsKey').value.trim();
   s.mailPerOrder=$('mailPerOrder').checked; s.mailStart=$('mailStart').value; s.mailEnd=$('mailEnd').value;
   s.driveScriptUrl=$('driveScriptUrl').value.trim();
   s.geminiKey=$('geminiKey').value.trim();
@@ -1561,10 +1564,10 @@ function mailReady(){
   const s=db.settings;
   return !!(typeof emailjs!=='undefined' && s.ejsService && s.ejsTemplate && s.ejsKey && s.mailTo);
 }
-function sendMail(subject,message,toEmail){
+function sendMail(subject,message,toEmail,templateId){
   const s=db.settings;
   if(!mailReady() && !toEmail) return Promise.reject(new Error('메일 설정이 완료되지 않았습니다. 설정에서 EmailJS 정보와 받는 이메일을 입력해 주세요.'));
-  return emailjs.send(s.ejsService, s.ejsTemplate, {
+  return emailjs.send(s.ejsService, (templateId||s.ejsTemplate), {
     to_email:(toEmail||s.mailTo), from_name:s.mailFrom||'LOWLIT COLLECTIVE', from_email:(s.mailFromEmail||''), reply_to:(s.mailFromEmail||s.coEmail||''), subject, message
   }, {publicKey:s.ejsKey});
 }
@@ -1812,7 +1815,8 @@ function registerLead(send){
 }
 function sendLeadMaterials(name, email, mats){
   const s=db.settings;
-  if(!(typeof emailjs!=='undefined'&&s.ejsService&&s.ejsTemplate&&s.ejsKey)){ alert('명함은 등록됐어요. 메일 발송은 설정 → 메일 알림의 EmailJS 정보가 필요합니다.'); return; }
+  if(!(typeof emailjs!=='undefined'&&s.ejsService&&s.ejsKey)){ alert('명함은 등록됐어요. 메일 발송은 설정 → 메일 알림의 EmailJS 정보가 필요합니다.'); return; }
+  if(!s.ejsTemplateCust){ alert('명함은 등록됐어요.\n고객에게 자료를 보내려면 별도의 "고객 발송용 Template ID"(To를 {{to_email}}로 설정)를 만들어 설정 → 메일 알림에 입력해 주세요. 주문 알림 템플릿은 내부 수신 전용이라 고객에게 보낼 수 없어요.'); return; }
   const urlFor=m=> m==='회사소개서'?s.matCompanyUrl : (m==='제품카탈로그'?s.matCatalogUrl : (m.indexOf('캐피블럭')>=0?s.matCappieUrl : ((m.indexOf('프레스킷')>=0||m.indexOf('Press')>=0)?s.matPresskitUrl:'')));
   const items=mats.map(m=>{ const u=urlFor(m); return `<div style="border:1px solid #eeeeee;border-radius:8px;padding:12px 14px;margin-bottom:8px;">`+
       `<div style="font-size:13px;font-weight:bold;color:#111111;">${esc(m)}</div>`+
@@ -1823,7 +1827,7 @@ function sendLeadMaterials(name, email, mats){
     `<div style="margin-top:14px;">${items}</div>`+
     `<div style="font-size:12px;color:#888888;margin-top:16px;line-height:1.7;border-top:1px solid #eeeeee;padding-top:12px;">LOWLIT COLLECTIVE<br>${esc(s.coEmail||'')}${s.coWeb?' · '+esc(s.coWeb):''}</div>`;
   const st=$('cardUploadStatus'); if(st) st.textContent='메일 발송 중…';
-  sendMail('[LOWLIT COLLECTIVE] 요청하신 자료 안내', mailWrap(inner,'자료 안내'), email)
+  sendMail('[LOWLIT COLLECTIVE] 요청하신 자료 안내', mailWrap(inner,'자료 안내'), email, s.ejsTemplateCust)
     .then(()=>{ if(st){ st.textContent='✅ 등록 + 자료 메일 발송 완료 ('+email+')'; setTimeout(()=>{ if(st.textContent.indexOf('발송 완료')>=0) st.textContent=''; },3500); } })
     .catch(e=>{ alert('명함은 등록됐어요. 메일 발송 실패: '+(e.text||e.message||e)); if(st) st.textContent=''; });
 }
@@ -2057,7 +2061,7 @@ function initSettings(){
   $('coEmail').value=s.coEmail;
   $('shipNote').value=s.shipNote||''; $('privacyText').value=s.privacyText; $('prodNotice').value=s.prodNotice||DEFAULT_NOTICE;
   $('mailTo').value=s.mailTo||''; $('mailFrom').value=s.mailFrom||''; $('mailFromEmail').value=s.mailFromEmail||''; $('ejsService').value=s.ejsService||'';
-  $('ejsTemplate').value=s.ejsTemplate||''; $('ejsKey').value=s.ejsKey||'';
+  $('ejsTemplate').value=s.ejsTemplate||''; $('ejsTemplateCust').value=s.ejsTemplateCust||''; $('ejsKey').value=s.ejsKey||'';
   $('mailPerOrder').checked=!!s.mailPerOrder; $('mailStart').value=s.mailStart||''; $('mailEnd').value=s.mailEnd||'';
   $('driveScriptUrl').value=s.driveScriptUrl||'';
   $('geminiKey').value=s.geminiKey||'';
