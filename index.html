@@ -176,7 +176,7 @@
 <!-- ════════ 로그인 화면 ════════ -->
 <div id="loginView" style="display:none; text-align:center; padding:120px 20px;">
   <div class="brand" style="font-size:18px; margin-bottom:6px;">lowlit collective</div>
-  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 32</span></p>
+  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 34</span></p>
   <button class="btn btn-dark" style="padding:13px 28px;" onclick="login()">Google 계정으로 로그인</button>
   <p id="loginErr" style="color:var(--red); font-size:12.5px; margin-top:16px;"></p>
 </div>
@@ -377,6 +377,14 @@
 
   <!-- ── 설정 ── -->
   <section id="tab-set" style="display:none;">
+    <div class="card">
+      <h2>🧑‍💼 판매 담당자 관리 <span class="hint">주문서 작성의 '판매 담당자' 목록 · 전시 공통</span></h2>
+      <div id="repList" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;"></div>
+      <div style="display:flex;gap:8px;max-width:360px;">
+        <input type="text" id="newRep" placeholder="담당자 이름 추가" onkeydown="if(event.key==='Enter'){event.preventDefault();addRep();}">
+        <button class="btn btn-dark btn-sm" style="white-space:nowrap;" onclick="addRep()">추가</button>
+      </div>
+    </div>
     <div class="grid2">
       <div class="card">
         <h2>🏢 회사 정보 <span class="hint">주문서 인쇄에 사용</span></h2>
@@ -410,6 +418,14 @@
       <div class="row"><div><label class="f">Gemini API 키 <span style="font-weight:400;color:var(--sub);">(명함 자동 정리 · aistudio.google.com/apikey 무료 발급)</span></label><input type="text" id="geminiKey" placeholder="AIza..." onchange="saveSettings()"></div></div>
       <div class="row"><div><label class="f">Apps Script 웹앱 URL <span style="font-weight:400;color:var(--sub);">(명함 구글 드라이브 자동 백업)</span></label><input type="text" id="driveScriptUrl" placeholder="https://script.google.com/macros/s/.../exec" onchange="saveSettings()"></div></div>
       <p style="font-size:11.5px;color:var(--sub);margin-top:8px;line-height:1.7;">Gemini 키를 넣으면 명함을 찍는 순간 <b>이름·회사/부서·직함·이메일·연락처</b>를 자동으로 뽑아 채웁니다(리멤버처럼). 드라이브 URL을 넣으면 사진이 전시 이름 폴더에 자동 백업돼요. 둘 다 비워둬도 앱에서 직접 정리할 수 있습니다.</p>
+    </div>
+
+    <div class="card">
+      <h2>📎 명함 발송 자료 <span class="hint">명함·상담 등록에서 체크해 메일로 보낼 자료 링크</span></h2>
+      <div class="row"><div><label class="f">회사소개서 링크</label><input type="text" id="matCompanyUrl" placeholder="https:// (구글드라이브·노션 등 공유 링크)" onchange="saveSettings()"></div></div>
+      <div class="row"><div><label class="f">제품카탈로그 링크</label><input type="text" id="matCatalogUrl" placeholder="https://" onchange="saveSettings()"></div></div>
+      <div class="row"><div><label class="f">캐피블럭 소개서(B2B) 링크</label><input type="text" id="matCappieUrl" placeholder="https://" onchange="saveSettings()"></div></div>
+      <p style="font-size:11.5px;color:var(--sub);margin-top:8px;line-height:1.7;">자료 공유 링크를 넣어두면, 명함·상담 등록에서 자료를 체크하고 '등록 + 자료 메일 발송'을 누를 때 그 링크가 담긴 메일이 상담자에게 자동 발송됩니다. (메일 발송은 아래 EmailJS 설정이 되어 있어야 해요.)</p>
     </div>
 
     <div class="card">
@@ -474,30 +490,52 @@
   <!-- ── 명함첩 ── -->
   <section id="tab-card" style="display:none;">
     <div class="card">
-      <h2>📇 명함 빠른 등록 <span class="hint" id="cardEvName"></span></h2>
-      <p style="font-size:12.5px;color:#666;margin-bottom:12px;">현장에서 받은 명함을 바로 촬영해 올리세요. 사진은 자동 압축되어 모든 기기에 공유됩니다.</p>
-      <div class="row" style="align-items:flex-end;">
-        <div style="flex:2;"><label class="f">이름·메모 (선택)</label><input type="text" id="cardMemo" placeholder="예: OO디자인 김OO 대표 / 협업 문의"></div>
-        <div style="flex:0 0 auto;">
-          <input type="file" id="cardFile" accept="image/*" capture="environment" style="display:none;" onchange="uploadCard(this)">
-          <button class="btn btn-dark btn-sm" onclick="document.getElementById('cardFile').click()">📷 명함 촬영·업로드</button>
-        </div>
+      <h2>📇 명함 및 상담 등록 <span class="hint" id="cardEvName"></span></h2>
+      <p style="font-size:12.5px;color:#666;margin-bottom:10px;">명함을 촬영하면 이름·회사·연락처가 자동으로 채워집니다. 명함이 없으면 직접 입력해 등록하세요. 상담 내용을 적고, 보낼 자료를 체크해 바로 메일로 보낼 수 있어요.</p>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; align-items:center;">
+        <input type="file" id="cardFile" accept="image/*" capture="environment" style="display:none;" onchange="uploadCardToForm(this)">
+        <button class="btn btn-dark btn-sm" onclick="document.getElementById('cardFile').click()">📷 명함 촬영/사진 첨부</button>
+        <span id="cardUploadStatus" style="font-size:12px;color:var(--sub);"></span>
       </div>
-      <div id="cardUploadStatus" style="font-size:12px;color:var(--sub);margin-top:8px;"></div>
+      <div class="row">
+        <div><label class="f">이름</label><input type="text" id="regName"></div>
+        <div style="flex:1.4;"><label class="f">회사/부서</label><input type="text" id="regCompany"></div>
+        <div><label class="f">직함</label><input type="text" id="regTitle"></div>
+      </div>
+      <div class="row">
+        <div style="flex:1.4;"><label class="f">이메일</label><input type="text" id="regEmail" placeholder="자료 메일 발송에 사용"></div>
+        <div><label class="f">연락처</label><input type="text" id="regPhone"></div>
+      </div>
+      <div style="margin-bottom:10px;"><label class="f">상담 내역</label><textarea id="regMemo" style="min-height:70px;" placeholder="상담 내용, 관심 품목, 요청 사항 등"></textarea></div>
+      <label class="f">발송 자료 (체크)</label>
+      <div style="display:flex; flex-direction:column; gap:5px; margin:5px 0 12px;">
+        <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer;"><input type="checkbox" id="mat_company" style="width:17px;height:17px;accent-color:#111;"> 회사소개서</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer;"><input type="checkbox" id="mat_catalog" style="width:17px;height:17px;accent-color:#111;"> 제품카탈로그</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer;"><input type="checkbox" id="mat_cappie" style="width:17px;height:17px;accent-color:#111;"> 캐피블럭 소개서(B2B)</label>
+        <div style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="mat_etc" style="width:17px;height:17px;accent-color:#111;"><span style="font-size:14px;">기타:</span><input type="text" id="mat_etc_text" placeholder="자료명/링크 기록" style="flex:1;max-width:320px;"></div>
+      </div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button class="btn btn-line btn-sm" onclick="registerLead(false)">등록만</button>
+        <button class="btn btn-dark btn-sm" onclick="registerLead(true)">등록 + 자료 메일 발송</button>
+      </div>
     </div>
     <div class="card">
-      <h2>🗂️ 등록된 명함(리드) <span class="hint" id="cardCount"></span></h2>
-      <div class="toolbar">
-        <span style="font-size:12px;color:var(--sub);font-weight:600;">상태</span>
-        <select id="cardFilter" onchange="renderCards()">
-          <option value="">전체</option><option>신규</option><option>상담중</option><option>견적발송</option><option>성사</option><option>보류</option>
-        </select>
-        <span id="cardStatusSummary" style="font-size:12px;color:var(--sub);"></span>
-        <div class="spacer"></div>
-        <button class="btn btn-line btn-sm" onclick="exportCards()">📤 명함 엑셀</button>
+      <h2>🗂️ 등록된 명함(리드) <span class="hint" id="cardCount"></span>
+        <button class="btn btn-line btn-sm" style="margin-left:auto;" id="cardListToggle" onclick="toggleCardList()">접기 ▲</button>
+      </h2>
+      <div id="cardListBody">
+        <div class="toolbar">
+          <span style="font-size:12px;color:var(--sub);font-weight:600;">상태</span>
+          <select id="cardFilter" onchange="renderCards()">
+            <option value="">전체</option><option>신규</option><option>상담중</option><option>견적발송</option><option>성사</option><option>보류</option>
+          </select>
+          <span id="cardStatusSummary" style="font-size:12px;color:var(--sub);"></span>
+          <div class="spacer"></div>
+          <button class="btn btn-line btn-sm" onclick="exportCards()">📤 명함 엑셀</button>
+        </div>
+        <div id="cardGallery" style="display:flex;flex-direction:column;gap:10px;"></div>
+        <div class="empty" id="cardEmpty" style="display:none;">아직 등록된 명함이 없습니다.</div>
       </div>
-      <div id="cardGallery" style="display:flex;flex-direction:column;gap:10px;"></div>
-      <div class="empty" id="cardEmpty" style="display:none;">아직 등록된 명함이 없습니다.</div>
     </div>
   </section>
 
@@ -510,7 +548,6 @@
       <div class="cf"><label>판매 담당자 <span class="req">*</span></label>
         <select id="kRep">
           <option value="">담당자 선택</option>
-          <option>재식</option><option>윤이</option><option>다움</option><option>윤지</option><option>양호</option><option>순호</option>
         </select>
       </div>
 
@@ -586,7 +623,7 @@
   </div>
   </section>
 
-  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 32</div>
+  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 34</div>
 </div>
 </div>
 
@@ -690,7 +727,9 @@ const DEFAULT_SETTINGS={
   prodNotice:DEFAULT_NOTICE,
   mailTo:'', mailFrom:'LOWLIT 주문봇', ejsService:'', ejsTemplate:'', ejsKey:'',
   mailPerOrder:false, mailStart:'', mailEnd:'',
-  driveScriptUrl:'', geminiKey:''
+  driveScriptUrl:'', geminiKey:'',
+  reps:['재식','윤이','다움','윤지','양호','순호'],
+  matCompanyUrl:'', matCatalogUrl:'', matCappieUrl:''
 };
 let db={events:[], currentEventId:null, orders:[], cards:[], settings:Object.assign({},DEFAULT_SETTINGS)};
 let fs=null, auth=null, configReady=false, started=false;
@@ -781,6 +820,7 @@ function saveSettings(){
   s.mailPerOrder=$('mailPerOrder').checked; s.mailStart=$('mailStart').value; s.mailEnd=$('mailEnd').value;
   s.driveScriptUrl=$('driveScriptUrl').value.trim();
   s.geminiKey=$('geminiKey').value.trim();
+  s.matCompanyUrl=$('matCompanyUrl').value.trim(); s.matCatalogUrl=$('matCatalogUrl').value.trim(); s.matCappieUrl=$('matCappieUrl').value.trim();
   save();
 }
 
@@ -1132,7 +1172,7 @@ function prepCustTab(){
   $('custForm').style.display='';
   $('custDone').style.display='none';
   $('custTitle').textContent=ev().name+' - 구매자 정보 기입';
-  $('kRep').value='';
+  syncRepSelect(); $('kRep').value='';
   $('kShipNotice').value=db.settings.shipNote||DEFAULT_SHIPNOTE;
   $('kPrivacyBox').textContent=db.settings.privacyText;
   $('kNoticeBox').textContent=db.settings.prodNotice||DEFAULT_NOTICE;
@@ -1246,7 +1286,7 @@ function resetCustForm(){
   closePostcode();
   $('kEtcChk').checked=false; $('kConsent').checked=false; $('kNoticeChk').checked=false;
   document.querySelectorAll('input[name="kPay"]').forEach(r=>r.checked=false);
-  $('kRep').value=''; $('kShipNotice').value=db.settings.shipNote||DEFAULT_SHIPNOTE;
+  syncRepSelect(); $('kRep').value=''; $('kShipNotice').value=db.settings.shipNote||DEFAULT_SHIPNOTE;
   renderCustProducts();
 }
 let submitting=false;
@@ -1517,11 +1557,11 @@ function mailReady(){
   const s=db.settings;
   return !!(typeof emailjs!=='undefined' && s.ejsService && s.ejsTemplate && s.ejsKey && s.mailTo);
 }
-function sendMail(subject,message){
+function sendMail(subject,message,toEmail){
   const s=db.settings;
-  if(!mailReady()) return Promise.reject(new Error('메일 설정이 완료되지 않았습니다. 설정에서 EmailJS 정보와 받는 이메일을 입력해 주세요.'));
+  if(!mailReady() && !toEmail) return Promise.reject(new Error('메일 설정이 완료되지 않았습니다. 설정에서 EmailJS 정보와 받는 이메일을 입력해 주세요.'));
   return emailjs.send(s.ejsService, s.ejsTemplate, {
-    to_email:s.mailTo, from_name:s.mailFrom||'주문 알림', subject, message
+    to_email:(toEmail||s.mailTo), from_name:s.mailFrom||'주문 알림', subject, message
   }, {publicKey:s.ejsKey});
 }
 function mailWrap(inner){
@@ -1689,6 +1729,96 @@ function printAllOrders(){
 
 /* ── 명함첩 ── */
 function cardsList(){ return db.cards.filter(c=>c.eventId===db.currentEventId); }
+let pendingCardImg='';
+function toggleCardList(){
+  const b=$('cardListBody'), tg=$('cardListToggle'); if(!b||!tg) return;
+  const hide=b.style.display!=='none';
+  b.style.display=hide?'none':''; tg.textContent=hide?'펼치기 ▼':'접기 ▲';
+}
+function uploadCardToForm(input){
+  const f=input.files[0]; if(!f) return;
+  const status=$('cardUploadStatus'); if(status) status.textContent='사진 처리 중…';
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const img=new Image();
+    img.onload=()=>{
+      const max=1200; let w=img.width,h=img.height;
+      if(w>h){ if(w>max){ h=Math.round(h*max/w); w=max; } } else { if(h>max){ w=Math.round(w*max/h); h=max; } }
+      const cv=document.createElement('canvas'); cv.width=w; cv.height=h; cv.getContext('2d').drawImage(img,0,0,w,h);
+      let q=0.7,d=cv.toDataURL('image/jpeg',q); while(d.length>900000&&q>0.3){ q-=0.1; d=cv.toDataURL('image/jpeg',q); }
+      pendingCardImg=d;
+      if(status) status.textContent='✅ 사진 첨부됨'+(db.settings.geminiKey?' · 정보 자동 인식 중…':'');
+      extractCardToForm(d);
+      input.value='';
+    };
+    img.onerror=()=>{ if(status) status.textContent='이미지를 읽을 수 없습니다.'; input.value=''; };
+    img.src=e.target.result;
+  };
+  reader.readAsDataURL(f);
+}
+async function extractCardToForm(dataUrl){
+  const key=db.settings.geminiKey; if(!key) return;
+  const b64=(dataUrl||'').split(',')[1]; if(!b64) return;
+  const status=$('cardUploadStatus');
+  try{
+    const body={contents:[{parts:[
+      {text:'다음 명함 이미지에서 정보를 추출해 JSON으로만 답하세요. 키: name(이름), company(회사명과 부서), title(직함), email, phone(대표 휴대폰 또는 전화 1개). 값이 없으면 빈 문자열. 코드블록이나 설명 없이 순수 JSON만 출력.'},
+      {inline_data:{mime_type:'image/jpeg', data:b64}}
+    ]}]};
+    const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key='+encodeURIComponent(key),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const j=await r.json(); if(j.error) throw new Error(j.error.message||'API 오류');
+    let txt=(j.candidates&&j.candidates[0]&&j.candidates[0].content&&j.candidates[0].content.parts&&j.candidates[0].content.parts[0].text)||'';
+    txt=txt.replace(/```json/gi,'').replace(/```/g,'').trim();
+    const info=JSON.parse(txt);
+    if(info.name&&!$('regName').value) $('regName').value=info.name;
+    if(info.company&&!$('regCompany').value) $('regCompany').value=info.company;
+    if(info.title&&!$('regTitle').value) $('regTitle').value=info.title;
+    if(info.email&&!$('regEmail').value) $('regEmail').value=info.email;
+    if(info.phone&&!$('regPhone').value) $('regPhone').value=info.phone;
+    if(status){ status.textContent='✅ 명함 정보 자동 입력됨 (확인 후 수정 가능)'; }
+  }catch(e){ if(status) status.textContent='사진 첨부됨 · 자동 인식 실패(직접 입력하세요)'; }
+}
+function resetLeadForm(){
+  ['regName','regCompany','regTitle','regEmail','regPhone','regMemo','mat_etc_text'].forEach(i=>{ if($(i)) $(i).value=''; });
+  ['mat_company','mat_catalog','mat_cappie','mat_etc'].forEach(i=>{ if($(i)) $(i).checked=false; });
+  pendingCardImg='';
+}
+function registerLead(send){
+  const gv=id=>{ const el=$(id); return el?el.value.trim():''; };
+  const name=gv('regName'), company=gv('regCompany'), title=gv('regTitle'), email=gv('regEmail'), phone=gv('regPhone'), memo=gv('regMemo');
+  const mats=[];
+  if($('mat_company').checked) mats.push('회사소개서');
+  if($('mat_catalog').checked) mats.push('제품카탈로그');
+  if($('mat_cappie').checked) mats.push('캐피블럭 소개서(B2B)');
+  if($('mat_etc').checked && gv('mat_etc_text')) mats.push('기타: '+gv('mat_etc_text'));
+  if(!name&&!company&&!email&&!phone&&!memo&&!pendingCardImg){ alert('명함 사진을 첨부하거나 내용을 입력해 주세요.'); return; }
+  if(!fs){ alert('서버 연결을 확인해 주세요.'); return; }
+  const memoFull=memo+((mats.length)?((memo?'\n':'')+'📎 발송자료: '+mats.join(', ')):'');
+  const card={id:'c'+Date.now()+Math.random().toString(36).slice(2,5), eventId:db.currentEventId, ts:nowLocal(), name, company, title, email, phone, interest:'', status:'신규', followUp:'', memo:memoFull, img:pendingCardImg||''};
+  fs.collection('cards').doc(card.id).set(clean(card)).then(()=>{ if(card.img) uploadToDrive(card); }).catch(e=>alert('저장 실패: '+e.message));
+  db.cards.unshift(card);
+  const st=$('cardUploadStatus');
+  if(send){
+    if(!email){ alert('명함은 등록됐어요. 다만 이메일 주소가 없어 자료 메일은 못 보냈어요.'); }
+    else if(!mats.length){ alert('명함은 등록됐어요. 보낼 자료를 체크하지 않아 메일은 발송하지 않았어요.'); }
+    else { sendLeadMaterials(name, email, mats); }
+  } else if(st){ st.textContent='✅ 등록 완료'; setTimeout(()=>{ if(st.textContent.indexOf('등록 완료')>=0) st.textContent=''; },2000); }
+  resetLeadForm(); renderCards();
+}
+function sendLeadMaterials(name, email, mats){
+  const s=db.settings;
+  if(!(typeof emailjs!=='undefined'&&s.ejsService&&s.ejsTemplate&&s.ejsKey)){ alert('명함은 등록됐어요. 메일 발송은 설정 → 메일 알림의 EmailJS 정보가 필요합니다.'); return; }
+  const urlFor=m=> m==='회사소개서'?s.matCompanyUrl : (m==='제품카탈로그'?s.matCatalogUrl : (m.indexOf('캐피블럭')>=0?s.matCappieUrl:''));
+  const items=mats.map(m=>{ const u=urlFor(m); return `<li style="margin-bottom:6px;">${esc(m)}${u?` — <a href="${esc(u)}" style="color:#3a6fd8;">${esc(u)}</a>`:''}</li>`; }).join('');
+  const inner=mailTitle('요청하신 자료를 보내드립니다')+
+    `<div style="font-size:13px;color:#333;line-height:1.7;">${esc(name||'')} 님, 안녕하세요. LOWLIT COLLECTIVE입니다.<br>전시에서 상담해 주셔서 감사합니다. 요청하신 자료를 아래에서 확인해 주세요.</div>`+
+    `<ul style="font-size:13px;color:#333;padding-left:18px;margin-top:10px;">${items}</ul>`+
+    `<div style="font-size:12px;color:#888;margin-top:12px;">문의: ${esc(s.coEmail||'')} · ${esc(s.coWeb||'')}</div>`;
+  const st=$('cardUploadStatus'); if(st) st.textContent='메일 발송 중…';
+  sendMail('[LOWLIT] 요청하신 자료 안내', mailWrap(inner), email)
+    .then(()=>{ if(st){ st.textContent='✅ 등록 + 자료 메일 발송 완료 ('+email+')'; setTimeout(()=>{ if(st.textContent.indexOf('발송 완료')>=0) st.textContent=''; },3500); } })
+    .catch(e=>{ alert('명함은 등록됐어요. 메일 발송 실패: '+(e.text||e.message||e)); if(st) st.textContent=''; });
+}
 function uploadToDrive(card){
   const url=db.settings.driveScriptUrl;
   if(!url) return;
@@ -1747,7 +1877,7 @@ function renderCards(){
     const overdue=c.followUp && c.followUp<=today0 && st!=='성사' && st!=='보류';
     const opts=CARD_STATUS.map(s=>`<option ${s===st?'selected':''}>${s}</option>`).join('');
     g.insertAdjacentHTML('beforeend',`<div style="display:flex;gap:12px;border:1px solid ${overdue?'var(--red)':'var(--line)'};border-radius:10px;padding:10px;background:#fff;align-items:flex-start;">
-      <img src="${c.img}" onclick="openCardImage('${c.id}')" title="크게 보기" style="width:132px;height:84px;object-fit:cover;border-radius:6px;cursor:zoom-in;flex-shrink:0;background:#f4f4f2;">
+      ${c.img?`<img src="${c.img}" onclick="openCardImage('${c.id}')" title="크게 보기" style="width:132px;height:84px;object-fit:cover;border-radius:6px;cursor:zoom-in;flex-shrink:0;background:#f4f4f2;">`:`<div style="width:132px;height:84px;border-radius:6px;flex-shrink:0;background:#f4f4f2;display:flex;align-items:center;justify-content:center;color:#bbb;font-size:12px;text-align:center;line-height:1.4;">명함<br>없음</div>`}
       <div style="flex:1;min-width:0;">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">
           <select id="cf_status_${c.id}" onchange="saveCard('${c.id}')" style="width:auto;font-weight:700;background:${tint[0]};color:${tint[1]};border-color:${tint[0]};">${opts}</select>
@@ -1769,7 +1899,7 @@ function renderCards(){
         <div><label class="f">상담 메모</label><textarea id="cf_memo_${c.id}" style="min-height:44px;">${esc(c.memo||'')}</textarea></div>
         <div style="display:flex;gap:6px;margin-top:7px;align-items:center;flex-wrap:wrap;">
           <button class="btn btn-dark btn-sm" id="cardsave_${c.id}" onclick="saveCard('${c.id}')">저장</button>
-          <a class="btn btn-line btn-sm" href="${c.img}" download="명함_${esc((c.name||c.ts.slice(0,10)))}.jpg" style="text-decoration:none;">⬇️ 이미지</a>
+          ${c.img?`<a class="btn btn-line btn-sm" href="${c.img}" download="명함_${esc((c.name||c.ts.slice(0,10)))}.jpg" style="text-decoration:none;">⬇️ 이미지</a>`:``}
           <button class="btn btn-red btn-sm" onclick="delCard('${c.id}')">삭제</button>
         </div>
       </div>
@@ -1923,10 +2053,32 @@ function initSettings(){
   $('mailPerOrder').checked=!!s.mailPerOrder; $('mailStart').value=s.mailStart||''; $('mailEnd').value=s.mailEnd||'';
   $('driveScriptUrl').value=s.driveScriptUrl||'';
   $('geminiKey').value=s.geminiKey||'';
+  $('matCompanyUrl').value=s.matCompanyUrl||''; $('matCatalogUrl').value=s.matCatalogUrl||''; $('matCappieUrl').value=s.matCappieUrl||'';
+}
+function syncRepSelect(){
+  if($('kRep')) $('kRep').innerHTML='<option value="">담당자 선택</option>'+(db.settings.reps||[]).map(r=>`<option>${esc(r)}</option>`).join('');
+}
+function renderReps(){
+  const box=$('repList'); if(!box) return;
+  const reps=db.settings.reps||[];
+  box.innerHTML=reps.length?reps.map((r,i)=>`<span class="pill p-gray" style="display:inline-flex;align-items:center;gap:6px;font-size:13px;padding:6px 12px;">${esc(r)} <span onclick="delRep(${i})" title="삭제" style="cursor:pointer;color:var(--red);font-weight:800;">✕</span></span>`).join(''):'<span style="color:var(--sub);font-size:12.5px;">담당자가 없습니다. 아래에서 추가하세요.</span>';
+}
+function addRep(){
+  const el=$('newRep'); const v=(el.value||'').trim(); if(!v) return;
+  db.settings.reps=db.settings.reps||[];
+  if(db.settings.reps.includes(v)){ alert('이미 있는 담당자입니다.'); return; }
+  db.settings.reps.push(v); el.value='';
+  save(); renderReps(); syncRepSelect();
+}
+function delRep(i){
+  const reps=db.settings.reps||[];
+  if(i<0||i>=reps.length) return;
+  if(!confirm(`'${reps[i]}' 담당자를 목록에서 삭제할까요?`)) return;
+  reps.splice(i,1); save(); renderReps(); syncRepSelect();
 }
 function renderAll(resetTab=true){
   if(!db.events.length||!ev()) return;
-  renderEvSelect(); renderHome(); renderOrders(); renderStock(); renderProducts(); renderPromos(); renderEvRows();
+  renderEvSelect(); renderHome(); renderOrders(); renderStock(); renderProducts(); renderPromos(); renderEvRows(); renderReps();
 }
 prTypeUI();
 ['input','change'].forEach(e=>{
