@@ -176,7 +176,7 @@
 <!-- ════════ 로그인 화면 ════════ -->
 <div id="loginView" style="display:none; text-align:center; padding:120px 20px;">
   <div class="brand" style="font-size:18px; margin-bottom:6px;">lowlit collective</div>
-  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 46</span></p>
+  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 48</span></p>
   <button class="btn btn-dark" style="padding:13px 28px;" onclick="login()">Google 계정으로 로그인</button>
   <p id="loginErr" style="color:var(--red); font-size:12.5px; margin-top:16px;"></p>
 </div>
@@ -670,7 +670,7 @@
   </div>
   </section>
 
-  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 46</div>
+  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 48</div>
 </div>
 </div>
 
@@ -1461,8 +1461,10 @@ function sendAlim(phone,name,tplCode,message,senddate){
   const s=db.settings;
   if(!s.kakaoRelayUrl||!s.kakaoSenderKey||!tplCode) return;
   const receiver=String(phone||'').replace(/[^0-9]/g,''); if(!receiver||!message) return;
-  const payload={ senderkey:s.kakaoSenderKey, tpl_code:tplCode, sender:String(s.kakaoSender||'').replace(/[^0-9]/g,''), receiver, recvname:name||'', message, senddate:senddate||'', failover:(s.kakaoFailover?'Y':'N'), fmessage:message };
-  try{ fetch(s.kakaoRelayUrl,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)}).catch(()=>{}); }catch(e){}
+  const p={ senderkey:s.kakaoSenderKey, tpl_code:tplCode, sender:String(s.kakaoSender||'').replace(/[^0-9]/g,''), receiver, recvname:name||'', message, senddate:senddate||'', failover:(s.kakaoFailover?'Y':'N'), fmessage:message };
+  const qs=Object.keys(p).map(k=>encodeURIComponent(k)+'='+encodeURIComponent(p[k])).join('&');
+  const url=s.kakaoRelayUrl+(s.kakaoRelayUrl.indexOf('?')>=0?'&':'?')+qs;
+  try{ fetch(url,{method:'GET',mode:'no-cors'}).catch(()=>{}); }catch(e){}
 }
 function sendOrderSms(o){ const s=db.settings; if(s.kakaoOnOrder&&o&&o.customer) sendAlim(o.customer.phone, o.customer.name, s.kakaoTplOrder, smsFill(s.kakaoMsgOrder,o)); }
 function testAlim(){
@@ -1475,8 +1477,12 @@ function testAlim(){
   if(!phone) miss.push('테스트 번호');
   if(miss.length){ alert('먼저 아래 값을 채우고 저장해 주세요:\n· '+miss.join('\n· ')); return; }
   const fake={ customer:{name:'테스트', phone:phone}, no:'TEST-000', ts:today()+'T00:00:00', items:[{name:'테스트상품',option:'',qty:1}], courier:(s.couriers&&s.couriers[0])||'택배사' };
-  sendAlim(phone, '테스트', s.kakaoTplOrder, smsFill(s.kakaoMsgOrder, fake));
-  alert('테스트 발송을 요청했습니다.\n\n· 카톡이 오는지 확인해 주세요.\n· 안 오면: script.google.com → 해당 프로젝트 → 왼쪽 \'실행(Executions)\'에서 방금 기록과 오류/응답을 확인하세요.\n· 알리고 전송내역도 확인해 주세요.');
+  const msg=smsFill(s.kakaoMsgOrder, fake);
+  const p={ senderkey:s.kakaoSenderKey, tpl_code:s.kakaoTplOrder, sender:String(s.kakaoSender||'').replace(/[^0-9]/g,''), receiver:phone, recvname:'테스트', message:msg, senddate:'', failover:(s.kakaoFailover?'Y':'N'), fmessage:msg };
+  const qs=Object.keys(p).map(k=>encodeURIComponent(k)+'='+encodeURIComponent(p[k])).join('&');
+  const url=s.kakaoRelayUrl+(s.kakaoRelayUrl.indexOf('?')>=0?'&':'?')+qs;
+  window.open(url,'_blank');
+  alert('새 탭에서 알리고 응답(JSON)이 열립니다.\n그 화면을 캡처해서 보내주세요.\n(성공이면 code 0, 실패면 오류 메시지가 보입니다.)');
 }
 function courierOpts(sel){ return (db.settings.couriers||[]).map(c=>`<option ${c===sel?'selected':''}>${esc(c)}</option>`).join(''); }
 function cycleShip(id){
