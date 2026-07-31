@@ -176,7 +176,7 @@
 <!-- ════════ 로그인 화면 ════════ -->
 <div id="loginView" style="display:none; text-align:center; padding:120px 20px;">
   <div class="brand" style="font-size:18px; margin-bottom:6px;">lowlit collective</div>
-  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 40</span></p>
+  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 43</span></p>
   <button class="btn btn-dark" style="padding:13px 28px;" onclick="login()">Google 계정으로 로그인</button>
   <p id="loginErr" style="color:var(--red); font-size:12.5px; margin-top:16px;"></p>
 </div>
@@ -430,6 +430,27 @@
     </div>
 
     <div class="card">
+      <h2>💬 카카오 알림톡 (알리고) <span class="hint">트리거 시 고객에게 알림톡 자동 발송 · 릴레이(Apps Script) 필요</span></h2>
+      <div class="row">
+        <div><label class="f">알리고 릴레이 URL (Apps Script)</label><input type="text" id="kakaoRelayUrl" placeholder="https://script.google.com/macros/s/.../exec" onchange="saveSettings()"></div>
+        <div><label class="f">발신프로필키 (senderkey)</label><input type="text" id="kakaoSenderKey" placeholder="카카오 채널 연동 키" onchange="saveSettings()"></div>
+      </div>
+      <div class="row">
+        <div><label class="f">발신번호 (대체발송용·선택)</label><input type="text" id="kakaoSender" placeholder="예: 0212345678" onchange="saveSettings()"></div>
+        <div style="display:flex;align-items:flex-end;padding-bottom:9px;"><label class="consent" style="cursor:pointer;display:flex;gap:8px;align-items:center;"><input type="checkbox" id="kakaoFailover"><span>알림톡 실패 시 문자(SMS)로 대체발송</span></label></div>
+      </div>
+      <div class="row"><div style="max-width:320px;"><label class="f">기본 택배사 <span style="font-weight:400;color:var(--sub);">(출고안내의 {courier})</span></label><input type="text" id="courierName" placeholder="예: CJ대한통운" onchange="saveSettings()"></div></div>
+      <div style="border-top:1px solid var(--line);margin:12px 0;"></div>
+      <label class="consent" style="cursor:pointer;display:flex;gap:8px;align-items:center;"><input type="checkbox" id="kakaoOnOrder"><span><b>주문 접수 시</b> 고객에게 발송</span></label>
+      <div class="row" style="margin-top:4px;"><div style="flex:0 0 190px;"><label class="f">템플릿코드</label><input type="text" id="kakaoTplOrder" placeholder="TPL_xxxx" onchange="saveSettings()"></div><div><label class="f">문구(승인 템플릿과 동일)</label><textarea id="kakaoMsgOrder" style="min-height:150px;font-size:12.5px;" onchange="saveSettings()"></textarea></div></div>
+      <label class="consent" style="cursor:pointer;display:flex;gap:8px;align-items:center;margin-top:10px;"><input type="checkbox" id="kakaoOnShip"><span><b>발송완료로 변경 시</b> 고객에게 발송</span></label>
+      <div class="row" style="margin-top:4px;"><div style="flex:0 0 190px;"><label class="f">템플릿코드</label><input type="text" id="kakaoTplShip" placeholder="TPL_xxxx" onchange="saveSettings()"></div><div><label class="f">문구</label><textarea id="kakaoMsgShip" style="min-height:180px;font-size:12.5px;" onchange="saveSettings()"></textarea></div></div>
+      <label class="consent" style="cursor:pointer;display:flex;gap:8px;align-items:center;margin-top:10px;"><input type="checkbox" id="kakaoOnReview"><span><b>발송 3일 뒤</b> 리뷰 독려 (예약발송)</span></label>
+      <div class="row" style="margin-top:4px;"><div style="flex:0 0 190px;"><label class="f">템플릿코드</label><input type="text" id="kakaoTplReview" placeholder="TPL_xxxx" onchange="saveSettings()"></div><div><label class="f">문구</label><textarea id="kakaoMsgReview" style="min-height:110px;font-size:12.5px;" onchange="saveSettings()"></textarea></div></div>
+      <p style="font-size:11.5px;color:var(--sub);margin-top:8px;line-height:1.7;">승인된 템플릿 문구를 미리 넣어뒀어요. 알리고 승인본과 <b>글자가 정확히 같아야</b> 발송되니, 알리고 템플릿과 다르면 이 칸을 알리고 문구로 맞춰주세요. 변수 <code>{name}</code>(고객명)·<code>{no}</code>(주문번호)·<code>{product}</code>(주문제품)·<code>{date}</code>(주문접수일)·<code>{courier}</code>(택배사)는 발송 시 자동 치환됩니다. 릴레이 URL·발신프로필키·템플릿코드가 있어야 발송돼요. (설정 방법은 별도 안내 참고)</p>
+    </div>
+
+    <div class="card">
       <h2>✉️ 후속 메일(고객 발송) 설정 <span class="hint">명함·상담 자료 메일 인사말·서명에 사용</span></h2>
       <div class="row">
         <div><label class="f">행사명(메일 표기)</label><input type="text" id="mailFairName" placeholder="예: 더메종 페어 (비우면 전시명)" onchange="saveSettings()"></div>
@@ -642,7 +663,7 @@
   </div>
   </section>
 
-  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 40</div>
+  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 43</div>
 </div>
 </div>
 
@@ -747,6 +768,10 @@ const DEFAULT_SETTINGS={
   mailTo:'', mailFrom:'LOWLIT COLLECTIVE', mailFromEmail:'', ejsService:'', ejsTemplate:'', ejsTemplateCust:'', ejsKey:'',
   mailPerOrder:false, mailStart:'', mailEnd:'',
   driveScriptUrl:'', geminiKey:'',
+  kakaoRelayUrl:'', kakaoSenderKey:'', kakaoSender:'', kakaoFailover:false, courierName:'',
+  kakaoOnOrder:false, kakaoTplOrder:'', kakaoMsgOrder:'[로우리트콜렉티브] 주문완료\n\n{name}님, 안녕하세요.\n로우리트 제품을 선택해주셔서\n진심으로 감사합니다.\n주문하신 제품의 상세정보를\n다시 한 번 확인해주시기 바랍니다.\n\n□ 주문번호 : {no}\n□ 주문제품 : {product}\n□ 주문접수일 : {date}\n\n배송이 시작되면 다시 상세하게\n안내해 드리겠습니다.\n감사합니다.',
+  kakaoOnShip:false, kakaoTplShip:'', kakaoMsgShip:'[로우리트콜렉티브] 제품 출고 안내\n\n{name}님, 안녕하세요. 주문하신 상품이 오늘 택배사로 안전하게 전달되었습니다.\n\n배송 출발 시점에 맞춰 택배사에서 상세정보를 다시 한 번 안내해 드릴 예정입니다.\n\n□ 주문번호 : {no}\n□ 주문제품 : {product}\n□ 택배사 : {courier}\n\n※ 택배사 사정에 따라 배송일은 변동 될 수 있으나, 고객님께 빠르게 전달 될 수 있도록 최선을 다하겠습니다.\n\n실시간 배송 상황은 송장번호가 생성된 직후부터 배송 조회 기능을 통해 확인하실 수 있습니다.',
+  kakaoOnReview:false, kakaoTplReview:'', kakaoMsgReview:'[로우리트콜렉티브] 나의 상품평\n\n{name}님 주문하신 상품은 잘 받으셨나요?\n\n배송받으신 상품이 마음에 드셨다면 상품평을 작성해주세요.\n고객님의 소중한 상품평을 기다리고 있어요.\n\n□ 주문번호 : {no}\n□ 나의 상품평 작성하기 : https://lowlit.co/review',
   reps:['재식','윤이','다움','윤지','양호','순호'],
   matCompanyUrl:'', matCatalogUrl:'', matCappieUrl:'', matPresskitUrl:'',
   mailFairName:'', boothPhotoUrl:'', repEmails:{}
@@ -839,6 +864,10 @@ function saveSettings(){
   s.ejsService=$('ejsService').value.trim(); s.ejsTemplate=$('ejsTemplate').value.trim(); s.ejsTemplateCust=$('ejsTemplateCust').value.trim(); s.ejsKey=$('ejsKey').value.trim();
   s.mailPerOrder=$('mailPerOrder').checked; s.mailStart=$('mailStart').value; s.mailEnd=$('mailEnd').value;
   s.driveScriptUrl=$('driveScriptUrl').value.trim();
+  s.kakaoRelayUrl=$('kakaoRelayUrl').value.trim(); s.kakaoSenderKey=$('kakaoSenderKey').value.trim(); s.kakaoSender=$('kakaoSender').value.trim(); s.kakaoFailover=$('kakaoFailover').checked; s.courierName=$('courierName').value.trim();
+  s.kakaoOnOrder=$('kakaoOnOrder').checked; s.kakaoTplOrder=$('kakaoTplOrder').value.trim(); s.kakaoMsgOrder=$('kakaoMsgOrder').value;
+  s.kakaoOnShip=$('kakaoOnShip').checked; s.kakaoTplShip=$('kakaoTplShip').value.trim(); s.kakaoMsgShip=$('kakaoMsgShip').value;
+  s.kakaoOnReview=$('kakaoOnReview').checked; s.kakaoTplReview=$('kakaoTplReview').value.trim(); s.kakaoMsgReview=$('kakaoMsgReview').value;
   s.geminiKey=$('geminiKey').value.trim();
   s.matCompanyUrl=$('matCompanyUrl').value.trim(); s.matCatalogUrl=$('matCatalogUrl').value.trim(); s.matCappieUrl=$('matCappieUrl').value.trim(); s.matPresskitUrl=$('matPresskitUrl').value.trim();
   s.mailFairName=$('mailFairName').value.trim(); s.boothPhotoUrl=$('boothPhotoUrl').value.trim();
@@ -1372,7 +1401,7 @@ async function submitCustOrder(){
     staffMemo:$('kStaffMemo').value.trim(), memoBad:'', memoWhy:''
   };
   db.orders.unshift(order);
-  saveOrderDoc(order); renderHome(); sendOrderMail(order);
+  saveOrderDoc(order); renderHome(); sendOrderMail(order); sendOrderSms(order);
   submitting=false; if(btn){ btn.disabled=false; btn.textContent='보내기'; }
   $('custForm').style.display='none';
   $('custDone').style.display='block';
@@ -1410,7 +1439,36 @@ function renderOrders(){
       </td></tr>`);
   });
 }
-function cycleShip(id){ const o=db.orders.find(x=>x.id===id); o.ship=o.ship==='상품준비'?'발송완료':'상품준비'; saveOrderDoc(o); renderOrders(); renderHome(); }
+function smsFill(tpl,o){
+  const s=db.settings;
+  const prod=(o.items||[]).filter(i=>!i.gift).map(i=>i.name+(i.option?'('+i.option+')':'')+' '+i.qty+'개').join(', ');
+  return String(tpl||'')
+    .replace(/{name}/g,(o.customer&&o.customer.name)||'')
+    .replace(/{no}/g,o.no||'')
+    .replace(/{product}/g,prod)
+    .replace(/{date}/g,(o.ts||'').slice(0,10))
+    .replace(/{courier}/g,s.courierName||'택배사');
+}
+function smsSendDate(days){ const d=new Date(Date.now()+days*86400000); const p=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`; }
+function sendAlim(phone,name,tplCode,message,senddate){
+  const s=db.settings;
+  if(!s.kakaoRelayUrl||!s.kakaoSenderKey||!tplCode) return;
+  const receiver=String(phone||'').replace(/[^0-9]/g,''); if(!receiver||!message) return;
+  const payload={ senderkey:s.kakaoSenderKey, tpl_code:tplCode, sender:String(s.kakaoSender||'').replace(/[^0-9]/g,''), receiver, recvname:name||'', message, senddate:senddate||'', failover:(s.kakaoFailover?'Y':'N'), fmessage:message };
+  try{ fetch(s.kakaoRelayUrl,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)}).catch(()=>{}); }catch(e){}
+}
+function sendOrderSms(o){ const s=db.settings; if(s.kakaoOnOrder&&o&&o.customer) sendAlim(o.customer.phone, o.customer.name, s.kakaoTplOrder, smsFill(s.kakaoMsgOrder,o)); }
+function cycleShip(id){
+  const o=db.orders.find(x=>x.id===id); const was=o.ship;
+  o.ship=o.ship==='상품준비'?'발송완료':'상품준비';
+  if(o.ship==='발송완료' && was!=='발송완료' && !o.smsShipped){
+    const s=db.settings;
+    if(s.kakaoOnShip) sendAlim(o.customer.phone, o.customer.name, s.kakaoTplShip, smsFill(s.kakaoMsgShip,o));
+    if(s.kakaoOnReview) sendAlim(o.customer.phone, o.customer.name, s.kakaoTplReview, smsFill(s.kakaoMsgReview,o), smsSendDate(3));
+    o.smsShipped=true;
+  }
+  saveOrderDoc(o); renderOrders(); renderHome();
+}
 function delOrder(id){
   if(!confirm('주문을 삭제할까요? 재고 주문수량에서도 제외됩니다.')) return;
   db.orders=db.orders.filter(o=>o.id!==id); deleteOrderDoc(id); renderAll(false);
@@ -2147,6 +2205,10 @@ function initSettings(){
   $('ejsTemplate').value=s.ejsTemplate||''; $('ejsTemplateCust').value=s.ejsTemplateCust||''; $('ejsKey').value=s.ejsKey||'';
   $('mailPerOrder').checked=!!s.mailPerOrder; $('mailStart').value=s.mailStart||''; $('mailEnd').value=s.mailEnd||'';
   $('driveScriptUrl').value=s.driveScriptUrl||'';
+  $('kakaoRelayUrl').value=s.kakaoRelayUrl||''; $('kakaoSenderKey').value=s.kakaoSenderKey||''; $('kakaoSender').value=s.kakaoSender||''; $('kakaoFailover').checked=!!s.kakaoFailover; $('courierName').value=s.courierName||'';
+  $('kakaoOnOrder').checked=!!s.kakaoOnOrder; $('kakaoTplOrder').value=s.kakaoTplOrder||''; $('kakaoMsgOrder').value=s.kakaoMsgOrder||'';
+  $('kakaoOnShip').checked=!!s.kakaoOnShip; $('kakaoTplShip').value=s.kakaoTplShip||''; $('kakaoMsgShip').value=s.kakaoMsgShip||'';
+  $('kakaoOnReview').checked=!!s.kakaoOnReview; $('kakaoTplReview').value=s.kakaoTplReview||''; $('kakaoMsgReview').value=s.kakaoMsgReview||'';
   $('geminiKey').value=s.geminiKey||'';
   $('matCompanyUrl').value=s.matCompanyUrl||''; $('matCatalogUrl').value=s.matCatalogUrl||''; $('matCappieUrl').value=s.matCappieUrl||''; $('matPresskitUrl').value=s.matPresskitUrl||'';
   $('mailFairName').value=s.mailFairName||''; $('boothPhotoUrl').value=s.boothPhotoUrl||'';
