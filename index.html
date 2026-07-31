@@ -176,7 +176,7 @@
 <!-- ════════ 로그인 화면 ════════ -->
 <div id="loginView" style="display:none; text-align:center; padding:120px 20px;">
   <div class="brand" style="font-size:18px; margin-bottom:6px;">lowlit collective</div>
-  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 45</span></p>
+  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 46</span></p>
   <button class="btn btn-dark" style="padding:13px 28px;" onclick="login()">Google 계정으로 로그인</button>
   <p id="loginErr" style="color:var(--red); font-size:12.5px; margin-top:16px;"></p>
 </div>
@@ -436,7 +436,7 @@
         <div><label class="f">발신프로필키 (senderkey)</label><input type="text" id="kakaoSenderKey" placeholder="카카오 채널 연동 키" onchange="saveSettings()"></div>
       </div>
       <div class="row">
-        <div><label class="f">발신번호 (대체발송용·선택)</label><input type="text" id="kakaoSender" placeholder="예: 0212345678" onchange="saveSettings()"></div>
+        <div><label class="f">발신번호 <span style="font-weight:400;color:var(--sub);">(알리고 등록번호 · 필수)</span></label><input type="text" id="kakaoSender" placeholder="예: 0212345678" onchange="saveSettings()"></div>
         <div style="display:flex;align-items:flex-end;padding-bottom:9px;"><label class="consent" style="cursor:pointer;display:flex;gap:8px;align-items:center;"><input type="checkbox" id="kakaoFailover"><span>알림톡 실패 시 문자(SMS)로 대체발송</span></label></div>
       </div>
       <div style="margin-top:6px;"><label class="f">택배사 목록 <span style="font-weight:400;color:var(--sub);">(발송완료 처리 시 선택 · 출고안내의 {courier})</span></label>
@@ -450,6 +450,10 @@
       <div class="row" style="margin-top:4px;"><div style="flex:0 0 190px;"><label class="f">템플릿코드</label><input type="text" id="kakaoTplShip" placeholder="TPL_xxxx" onchange="saveSettings()"></div><div><label class="f">문구</label><textarea id="kakaoMsgShip" style="min-height:180px;font-size:12.5px;" onchange="saveSettings()"></textarea></div></div>
       <label class="consent" style="cursor:pointer;display:flex;gap:8px;align-items:center;margin-top:10px;"><input type="checkbox" id="kakaoOnReview"><span><b>발송 3일 뒤</b> 리뷰 독려 (예약발송)</span></label>
       <div class="row" style="margin-top:4px;"><div style="flex:0 0 190px;"><label class="f">템플릿코드</label><input type="text" id="kakaoTplReview" placeholder="TPL_xxxx" onchange="saveSettings()"></div><div><label class="f">문구</label><textarea id="kakaoMsgReview" style="min-height:110px;font-size:12.5px;" onchange="saveSettings()"></textarea></div></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;align-items:center;">
+        <input type="text" id="kakaoTestPhone" placeholder="테스트 받을 번호 (예: 01012345678)" style="max-width:230px;">
+        <button class="btn btn-line btn-sm" onclick="testAlim()">💬 알림톡 테스트 발송</button>
+      </div>
       <p style="font-size:11.5px;color:var(--sub);margin-top:8px;line-height:1.7;">승인된 템플릿 문구를 미리 넣어뒀어요. 알리고 승인본과 <b>글자가 정확히 같아야</b> 발송되니, 알리고 템플릿과 다르면 이 칸을 알리고 문구로 맞춰주세요. 변수 <code>{name}</code>(고객명)·<code>{no}</code>(주문번호)·<code>{product}</code>(주문제품)·<code>{date}</code>(주문접수일)·<code>{courier}</code>(택배사)는 발송 시 자동 치환됩니다. 릴레이 URL·발신프로필키·템플릿코드가 있어야 발송돼요. (설정 방법은 별도 안내 참고)</p>
     </div>
 
@@ -666,7 +670,7 @@
   </div>
   </section>
 
-  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 45</div>
+  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 46</div>
 </div>
 </div>
 
@@ -1461,6 +1465,19 @@ function sendAlim(phone,name,tplCode,message,senddate){
   try{ fetch(s.kakaoRelayUrl,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)}).catch(()=>{}); }catch(e){}
 }
 function sendOrderSms(o){ const s=db.settings; if(s.kakaoOnOrder&&o&&o.customer) sendAlim(o.customer.phone, o.customer.name, s.kakaoTplOrder, smsFill(s.kakaoMsgOrder,o)); }
+function testAlim(){
+  const s=db.settings; const miss=[];
+  if(!s.kakaoRelayUrl) miss.push('릴레이 URL');
+  if(!s.kakaoSenderKey) miss.push('발신프로필키(senderkey)');
+  if(!s.kakaoSender) miss.push('발신번호');
+  if(!s.kakaoTplOrder) miss.push('주문완료 템플릿코드');
+  const phone=(($('kakaoTestPhone')&&$('kakaoTestPhone').value)||'').replace(/[^0-9]/g,'');
+  if(!phone) miss.push('테스트 번호');
+  if(miss.length){ alert('먼저 아래 값을 채우고 저장해 주세요:\n· '+miss.join('\n· ')); return; }
+  const fake={ customer:{name:'테스트', phone:phone}, no:'TEST-000', ts:today()+'T00:00:00', items:[{name:'테스트상품',option:'',qty:1}], courier:(s.couriers&&s.couriers[0])||'택배사' };
+  sendAlim(phone, '테스트', s.kakaoTplOrder, smsFill(s.kakaoMsgOrder, fake));
+  alert('테스트 발송을 요청했습니다.\n\n· 카톡이 오는지 확인해 주세요.\n· 안 오면: script.google.com → 해당 프로젝트 → 왼쪽 \'실행(Executions)\'에서 방금 기록과 오류/응답을 확인하세요.\n· 알리고 전송내역도 확인해 주세요.');
+}
 function courierOpts(sel){ return (db.settings.couriers||[]).map(c=>`<option ${c===sel?'selected':''}>${esc(c)}</option>`).join(''); }
 function cycleShip(id){
   const o=db.orders.find(x=>x.id===id); if(!o) return;
