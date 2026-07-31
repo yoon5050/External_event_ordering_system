@@ -176,7 +176,7 @@
 <!-- ════════ 로그인 화면 ════════ -->
 <div id="loginView" style="display:none; text-align:center; padding:120px 20px;">
   <div class="brand" style="font-size:18px; margin-bottom:6px;">lowlit collective</div>
-  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 44</span></p>
+  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 45</span></p>
   <button class="btn btn-dark" style="padding:13px 28px;" onclick="login()">Google 계정으로 로그인</button>
   <p id="loginErr" style="color:var(--red); font-size:12.5px; margin-top:16px;"></p>
 </div>
@@ -666,7 +666,7 @@
   </div>
   </section>
 
-  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 44</div>
+  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 45</div>
 </div>
 </div>
 
@@ -696,16 +696,6 @@
       <a id="cardLightboxDl" class="btn btn-line btn-sm" download style="text-decoration:none;">⬇️ 저장</a>
       <button class="btn btn-ghost btn-sm" onclick="cardLightbox.close()">닫기</button>
     </div>
-  </div>
-</dialog>
-
-<dialog id="shipDlg">
-  <div class="dlg-body">
-    <div class="dlg-head"><h3>🚚 발송 처리</h3><button class="btn btn-ghost btn-sm" onclick="shipDlg.close()">닫기</button></div>
-    <div class="row"><div><label class="f">택배사</label><select id="shipCourier"></select></div></div>
-    <div class="row"><div><label class="f">송장번호 (선택)</label><input type="text" id="shipTracking" placeholder="선택 입력"></div></div>
-    <p style="font-size:12px;color:var(--sub);margin-bottom:12px;">확인 시 '발송완료'로 변경되고, 켜둔 알림톡(출고안내·리뷰)이 이 택배사로 발송됩니다.</p>
-    <button class="btn btn-dark" onclick="confirmShip()">발송완료 처리</button>
   </div>
 </dialog>
 
@@ -1443,7 +1433,7 @@ function renderOrders(){
       <td style="max-width:230px;">${items}</td>
       <td class="num"><b>${fmt(paid(o))}원</b>${o.discount?`<br><span style="font-size:11px;color:var(--red);">할인 -${fmt(o.discount)}</span>`:''}</td>
       <td style="white-space:nowrap;"><span class="pill p-green">${esc(o.pay)}</span></td>
-      <td style="white-space:nowrap;"><span class="pill ${shipCls}" style="cursor:pointer;" onclick="cycleShip('${o.id}')" title="클릭하여 변경">${o.ship}</span></td>
+      <td style="white-space:nowrap;">${o.ship==='상품준비'?`<select id="rowcourier_${o.id}" title="택배사 선택" style="width:auto;font-size:11.5px;padding:3px 6px;margin-bottom:3px;display:block;">${courierOpts(o.courier)}</select>`:`<div style="font-size:11px;color:var(--sub);margin-bottom:2px;">🚚 ${esc(o.courier)||'-'}</div>`}<span class="pill ${shipCls}" style="cursor:pointer;" onclick="cycleShip('${o.id}')" title="${o.ship==='상품준비'?'택배사 선택 후 클릭 → 발송완료':'클릭하여 상품준비로'}">${o.ship}</span></td>
       <td class="memo-cell" title="${esc(memo)}"><div class="memo-clamp">${esc(memo)||'-'}</div></td>
       <td style="white-space:nowrap;">
         <button class="btn btn-line btn-sm" onclick="openDetail('${o.id}')">상세</button>
@@ -1471,29 +1461,20 @@ function sendAlim(phone,name,tplCode,message,senddate){
   try{ fetch(s.kakaoRelayUrl,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)}).catch(()=>{}); }catch(e){}
 }
 function sendOrderSms(o){ const s=db.settings; if(s.kakaoOnOrder&&o&&o.customer) sendAlim(o.customer.phone, o.customer.name, s.kakaoTplOrder, smsFill(s.kakaoMsgOrder,o)); }
-let shipTargetId='';
+function courierOpts(sel){ return (db.settings.couriers||[]).map(c=>`<option ${c===sel?'selected':''}>${esc(c)}</option>`).join(''); }
 function cycleShip(id){
   const o=db.orders.find(x=>x.id===id); if(!o) return;
   if(o.ship==='발송완료'){ o.ship='상품준비'; saveOrderDoc(o); renderOrders(); renderHome(); return; }
-  shipTargetId=id;
-  const sel=$('shipCourier');
-  sel.innerHTML=(db.settings.couriers||[]).map(c=>`<option>${esc(c)}</option>`).join('')||'<option value="">(설정에서 택배사 추가)</option>';
-  if(o.courier) sel.value=o.courier;
-  $('shipTracking').value=o.tracking||'';
-  shipDlg.showModal();
-}
-function confirmShip(){
-  const o=db.orders.find(x=>x.id===shipTargetId); if(!o){ shipDlg.close(); return; }
-  const was=o.ship;
-  o.courier=$('shipCourier').value||''; o.tracking=$('shipTracking').value.trim();
-  o.ship='발송완료';
+  const sel=$('rowcourier_'+id);
+  o.courier = sel ? sel.value : (o.courier||'');
+  const was=o.ship; o.ship='발송완료';
   if(was!=='발송완료' && !o.smsShipped){
     const s=db.settings;
     if(s.kakaoOnShip) sendAlim(o.customer.phone, o.customer.name, s.kakaoTplShip, smsFill(s.kakaoMsgShip,o));
     if(s.kakaoOnReview) sendAlim(o.customer.phone, o.customer.name, s.kakaoTplReview, smsFill(s.kakaoMsgReview,o), smsSendDate(3));
     o.smsShipped=true;
   }
-  saveOrderDoc(o); shipDlg.close(); renderOrders(); renderHome();
+  saveOrderDoc(o); renderOrders(); renderHome();
 }
 function delOrder(id){
   if(!confirm('주문을 삭제할까요? 재고 주문수량에서도 제외됩니다.')) return;
