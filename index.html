@@ -425,6 +425,7 @@
       <h2>📎 명함 발송 자료 <span class="hint">명함·상담 등록에서 체크해 메일로 보낼 자료 링크</span></h2>
       <div class="row"><div><label class="f">회사소개서 링크</label><input type="text" id="matCompanyUrl" placeholder="https:// (구글드라이브·노션 등 공유 링크)" onchange="saveSettings()"></div></div>
       <div class="row"><div><label class="f">제품카탈로그 링크</label><input type="text" id="matCatalogUrl" placeholder="https://" onchange="saveSettings()"></div></div>
+      <div class="row"><div><label class="f">룩북(Lookbook) 링크 <span style="font-weight:400;color:var(--sub);">(공간 연출 사례·이미지 중심 자료)</span></label><input type="text" id="matLookbookUrl" placeholder="https://" onchange="saveSettings()"></div></div>
       <div class="row"><div><label class="f">캐피블럭 소개서(B2B) 링크</label><input type="text" id="matCappieUrl" placeholder="https://" onchange="saveSettings()"></div></div>
       <div class="row"><div><label class="f">프레스킷(Press Kit) 드라이브 링크</label><input type="text" id="matPresskitUrl" placeholder="https:// (구글 드라이브 공유 링크)" onchange="saveSettings()"></div></div>
       <p style="font-size:11.5px;color:var(--sub);margin-top:8px;line-height:1.7;">자료 공유 링크를 넣어두면, 명함·상담 등록에서 자료를 체크하고 '등록 + 자료 메일 발송'을 누를 때 그 링크가 담긴 메일이 상담자에게 자동 발송됩니다. (메일 발송은 아래 EmailJS 설정이 되어 있어야 해요.)</p>
@@ -558,6 +559,7 @@
       <div style="display:flex; flex-direction:column; gap:5px; margin:5px 0 12px;">
         <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer;"><input type="checkbox" id="mat_company" style="width:17px;height:17px;accent-color:#111;"> 회사소개서</label>
         <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer;"><input type="checkbox" id="mat_catalog" style="width:17px;height:17px;accent-color:#111;"> 제품카탈로그</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer;"><input type="checkbox" id="mat_lookbook" style="width:17px;height:17px;accent-color:#111;"> 룩북(Lookbook)</label>
         <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer;"><input type="checkbox" id="mat_cappie" style="width:17px;height:17px;accent-color:#111;"> 캐피블럭 소개서(B2B)</label>
         <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer;"><input type="checkbox" id="mat_presskit" style="width:17px;height:17px;accent-color:#111;"> 프레스킷(Press Kit)</label>
         <div style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="mat_etc" style="width:17px;height:17px;accent-color:#111;"><span style="font-size:14px;">기타:</span><input type="text" id="mat_etc_text" placeholder="자료명/링크 기록" style="flex:1;max-width:320px;"></div>
@@ -781,7 +783,7 @@ const DEFAULT_SETTINGS={
   kakaoOnShip:false, kakaoTplShip:'', kakaoMsgShip:'[로우리트콜렉티브] 제품 출고 안내\n\n{name}님, 안녕하세요. 주문하신 상품이 오늘 택배사로 안전하게 전달되었습니다.\n\n배송 출발 시점에 맞춰 택배사에서 상세정보를 다시 한 번 안내해 드릴 예정입니다.\n\n□ 주문번호 : {no}\n□ 주문제품 : {product}\n□ 택배사 : {courier}\n\n※ 택배사 사정에 따라 배송일은 변동 될 수 있으나, 고객님께 빠르게 전달 될 수 있도록 최선을 다하겠습니다.\n\n실시간 배송 상황은 송장번호가 생성된 직후부터 배송 조회 기능을 통해 확인하실 수 있습니다.',
   kakaoOnReview:false, kakaoTplReview:'', kakaoMsgReview:'[로우리트콜렉티브] 나의 상품평\n\n{name}님 주문하신 상품은 잘 받으셨나요?\n\n배송받으신 상품이 마음에 드셨다면 상품평을 작성해주세요.\n고객님의 소중한 상품평을 기다리고 있어요.\n\n□ 주문번호 : {no}\n□ 나의 상품평 작성하기 : https://lowlit.co/review',
   reps:['재식','윤이','다움','윤지','양호','순호'],
-  matCompanyUrl:'', matCatalogUrl:'', matCappieUrl:'', matPresskitUrl:'',
+  matCompanyUrl:'', matCatalogUrl:'', matLookbookUrl:'', matCappieUrl:'', matPresskitUrl:'',
   mailFairName:'', boothPhotoUrl:'', repEmails:{}
 };
 let db={events:[], currentEventId:null, orders:[], cards:[], settings:Object.assign({},DEFAULT_SETTINGS)};
@@ -877,7 +879,7 @@ function saveSettings(){
   s.kakaoOnShip=$('kakaoOnShip').checked; s.kakaoTplShip=$('kakaoTplShip').value.trim();
   s.kakaoOnReview=$('kakaoOnReview').checked; s.kakaoTplReview=$('kakaoTplReview').value.trim();
   s.geminiKey=$('geminiKey').value.trim();
-  s.matCompanyUrl=$('matCompanyUrl').value.trim(); s.matCatalogUrl=$('matCatalogUrl').value.trim(); s.matCappieUrl=$('matCappieUrl').value.trim(); s.matPresskitUrl=$('matPresskitUrl').value.trim();
+  s.matCompanyUrl=$('matCompanyUrl').value.trim(); s.matCatalogUrl=$('matCatalogUrl').value.trim(); s.matLookbookUrl=$('matLookbookUrl').value.trim(); s.matCappieUrl=$('matCappieUrl').value.trim(); s.matPresskitUrl=$('matPresskitUrl').value.trim();
   s.mailFairName=$('mailFairName').value.trim(); s.boothPhotoUrl=$('boothPhotoUrl').value.trim();
   save();
 }
@@ -1896,7 +1898,7 @@ async function extractCardToForm(dataUrl){
 function resetLeadForm(){
   ['regName','regCompany','regTitle','regEmail','regPhone','regMemo','mat_etc_text'].forEach(i=>{ if($(i)) $(i).value=''; });
   if($('regRep')) $('regRep').value='';
-  ['mat_company','mat_catalog','mat_cappie','mat_presskit','mat_etc'].forEach(i=>{ if($(i)) $(i).checked=false; });
+  ['mat_company','mat_catalog','mat_lookbook','mat_cappie','mat_presskit','mat_etc'].forEach(i=>{ if($(i)) $(i).checked=false; });
   pendingCardImg='';
 }
 function registerLead(send){
@@ -1906,6 +1908,7 @@ function registerLead(send){
   const mats=[];
   if($('mat_company').checked) mats.push('회사소개서');
   if($('mat_catalog').checked) mats.push('제품카탈로그');
+  if($('mat_lookbook')&&$('mat_lookbook').checked) mats.push('룩북(Lookbook)');
   if($('mat_cappie').checked) mats.push('캐피블럭 소개서(B2B)');
   if($('mat_presskit').checked) mats.push('프레스킷(Press Kit)');
   if($('mat_etc').checked && gv('mat_etc_text')) mats.push('기타: '+gv('mat_etc_text'));
@@ -1930,7 +1933,7 @@ function driveDirectImg(url){
   if(!id){ m=url.match(/\/d\/([-\w]{20,})/); if(m) id=m[1]; }
   return id? ('https://drive.google.com/thumbnail?id='+id+'&sz=w1000') : url;
 }
-function matUrl(m){ const s=db.settings; return m==='회사소개서'?s.matCompanyUrl : (m==='제품카탈로그'?s.matCatalogUrl : (m.indexOf('캐피블럭')>=0?s.matCappieUrl : ((m.indexOf('프레스킷')>=0||m.indexOf('Press')>=0)?s.matPresskitUrl:''))); }
+function matUrl(m){ const s=db.settings; return m==='회사소개서'?s.matCompanyUrl : (m==='제품카탈로그'?s.matCatalogUrl : ((m.indexOf('룩북')>=0||m.toLowerCase().indexOf('lookbook')>=0)?s.matLookbookUrl : (m.indexOf('캐피블럭')>=0?s.matCappieUrl : ((m.indexOf('프레스킷')>=0||m.indexOf('Press')>=0)?s.matPresskitUrl:'')))); }
 function leadEmailHtml(lead, mats){
   const s=db.settings;
   const sign=(s.mailSignName||'').trim();
@@ -1984,7 +1987,7 @@ function sendLeadFromList(id, stage){
   const c=db.cards.find(x=>x.id===id); if(!c) return;
   const mats=[];
   const chk=(k,label)=>{ const el=document.getElementById('lc_'+k+'_'+id); if(el&&el.checked) mats.push(label); };
-  chk('company','회사소개서'); chk('catalog','제품카탈로그'); chk('cappie','캐피블럭 소개서(B2B)'); chk('presskit','프레스킷(Press Kit)');
+  chk('company','회사소개서'); chk('catalog','제품카탈로그'); chk('lookbook','룩북(Lookbook)'); chk('cappie','캐피블럭 소개서(B2B)'); chk('presskit','프레스킷(Press Kit)');
   if(!c.email){ alert('이메일이 없어요. 이메일 칸을 채우고 저장한 뒤 다시 시도해 주세요.'); return; }
   if(!mats.length){ if(!confirm((stage===2?'2차 컨택':'1차')+' 메일을 자료 없이 인사말만 보낼까요?')) return; }
   if(!confirm((stage===2?'2차 컨택':'1차 자료')+' 메일을 '+c.email+' 로 보낼까요?')) return;
@@ -2078,6 +2081,7 @@ function renderCards(){
           <div style="display:flex;gap:10px;flex-wrap:wrap;font-size:12.5px;margin-bottom:6px;">
             <label style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="lc_company_${c.id}"> 회사소개서</label>
             <label style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="lc_catalog_${c.id}"> 제품카탈로그</label>
+            <label style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="lc_lookbook_${c.id}"> 룩북</label>
             <label style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="lc_cappie_${c.id}"> 캐피블럭(B2B)</label>
             <label style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="lc_presskit_${c.id}"> 프레스킷</label>
           </div>
@@ -2246,7 +2250,7 @@ function initSettings(){
   $('kakaoOnShip').checked=!!s.kakaoOnShip; $('kakaoTplShip').value=s.kakaoTplShip||'';
   $('kakaoOnReview').checked=!!s.kakaoOnReview; $('kakaoTplReview').value=s.kakaoTplReview||'';
   $('geminiKey').value=s.geminiKey||'';
-  $('matCompanyUrl').value=s.matCompanyUrl||''; $('matCatalogUrl').value=s.matCatalogUrl||''; $('matCappieUrl').value=s.matCappieUrl||''; $('matPresskitUrl').value=s.matPresskitUrl||'';
+  $('matCompanyUrl').value=s.matCompanyUrl||''; $('matCatalogUrl').value=s.matCatalogUrl||''; if($('matLookbookUrl')) $('matLookbookUrl').value=s.matLookbookUrl||''; $('matCappieUrl').value=s.matCappieUrl||''; $('matPresskitUrl').value=s.matPresskitUrl||'';
   $('mailFairName').value=s.mailFairName||''; $('boothPhotoUrl').value=s.boothPhotoUrl||'';
 }
 function syncRepSelect(){
