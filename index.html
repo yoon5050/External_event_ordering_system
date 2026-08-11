@@ -176,7 +176,7 @@
 <!-- ════════ 로그인 화면 ════════ -->
 <div id="loginView" style="display:none; text-align:center; padding:120px 20px;">
   <div class="brand" style="font-size:18px; margin-bottom:6px;">lowlit collective</div>
-  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 65</span></p>
+  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 66</span></p>
   <button class="btn btn-dark" style="padding:13px 28px;" onclick="login()">Google 계정으로 로그인</button>
   <p id="loginErr" style="color:var(--red); font-size:12.5px; margin-top:16px;"></p>
 </div>
@@ -391,11 +391,10 @@
         <div><label class="f" id="gpNLabel">기준 금액 (원)</label><input type="number" id="gpN" min="1" value="50000"></div>
         <div><label class="f" id="gpMLabel">증정 수량 (개)</label><input type="number" id="gpM" min="1" value="1"></div>
         <div id="gpGiftWrap" style="flex:1.5;"><label class="f">증정품 (자동 지급)</label><select id="gpGift"></select></div>
-        <div id="gpStockWrap"><label class="f">준비수량 <span style="font-weight:400;color:var(--sub);">(0=제한없음)</span></label><input type="number" id="gpStock" min="0" value="0"></div>
         <div style="flex:1.5;"><label class="f">대상 제품</label><select id="gpPid"><option value="">전체 제품 합산</option></select></div>
       </div>
       <button class="btn btn-dark btn-sm" onclick="addGiftPromo()">증정 추가</button>
-      <p style="font-size:11.5px;color:var(--sub);margin-top:8px;"><b>N원 이상 구매 시 증정품</b>은 주문 금액(대상 기준)이 기준 금액 이상이면 지정한 증정품이 자동 지급됩니다. <b>준비수량</b>을 넣으면 아래 재고표에서 지급·잔여가 집계돼요(0이면 제한없음). <b>N개 구매 시 M개 무료</b>는 묶음마다 반복 적용되고, 무료 품목은 주문 시 선택합니다.</p>
+      <p style="font-size:11.5px;color:var(--sub);margin-top:8px;">증정품은 아래 <b>🎀 증정품 등록</b>에서 먼저 추가한 뒤 위 <b>증정품(자동 지급)</b>에서 선택하세요(제품 목록과 분리됨). <b>N원 이상 구매 시 증정품</b>은 대상 금액이 기준 이상이면 자동 지급되고, 지급·잔여는 아래 증정품 표에서 집계됩니다. <b>N개 구매 시 M개 무료</b>는 묶음마다 반복 적용되며, 무료 품목은 주문 시 제품에서 선택합니다.</p>
       <div class="scroll-x" style="margin-top:12px;">
       <table>
         <thead><tr><th>증정명</th><th>내용</th><th>대상</th><th>상태</th><th></th></tr></thead>
@@ -403,14 +402,19 @@
       </table>
       </div>
       <div class="empty" id="giftEmpty" style="display:none;">등록된 증정 이벤트가 없습니다.</div>
-      <h2 style="font-size:15px;margin-top:22px;">📦 증정품 재고 <span class="hint">준비수량 대비 지급·잔여</span></h2>
-      <div class="scroll-x" style="margin-top:8px;">
+      <h2 style="font-size:15px;margin-top:22px;">🎀 증정품 등록 <span class="hint">여기서 등록한 증정품만 위 '증정품(자동 지급)'에 나옵니다 · 제품과 분리</span></h2>
+      <div class="row" style="margin-top:4px;">
+        <div style="flex:1.5;"><label class="f">증정품명 *</label><input type="text" id="gfName" placeholder="예: 미니 캔들, 파우치"></div>
+        <div><label class="f">준비수량 <span style="font-weight:400;color:var(--sub);">(0=제한없음)</span></label><input type="number" id="gfStock" min="0" value="0"></div>
+        <div style="display:flex;align-items:flex-end;"><button class="btn btn-dark btn-sm" onclick="addGift()">증정품 추가</button></div>
+      </div>
+      <div class="scroll-x" style="margin-top:12px;">
       <table>
-        <thead><tr><th>증정품</th><th>증정 이벤트</th><th class="num">준비수량</th><th class="num">지급</th><th class="num">잔여</th></tr></thead>
+        <thead><tr><th>증정품</th><th class="num">준비수량</th><th class="num">지급</th><th class="num">잔여</th><th></th></tr></thead>
         <tbody id="giftStockRows"></tbody>
       </table>
       </div>
-      <div class="empty" id="giftStockEmpty" style="display:none;">준비수량이 있는 증정품이 없습니다. 위 '준비수량'을 입력하면 여기에 재고가 집계됩니다.</div>
+      <div class="empty" id="giftStockEmpty" style="display:none;">등록된 증정품이 없습니다. 위에서 증정품을 추가하세요.</div>
     </div>
   </section>
 
@@ -722,7 +726,7 @@
   </div>
   </section>
 
-  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 65</div>
+  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 66</div>
 </div>
 </div>
 
@@ -1118,7 +1122,6 @@ function gpTypeUI(){
   $('gpNLabel').textContent=amt?'기준 금액 (원)':'N (기준 수량)';
   $('gpMLabel').textContent=amt?'증정 수량 (개)':'M (무료 수량)';
   $('gpGiftWrap').style.display=amt?'':'none';
-  $('gpStockWrap').style.display=amt?'':'none';
 }
 function addPromo(){
   const name=$('prName').value.trim(), type=$('prType').value;
@@ -1134,13 +1137,43 @@ function addGiftPromo(){
   const name=$('gpName').value.trim(), type=$('gpType').value;
   const n=Math.max(1,+$('gpN').value||0), m=Math.max(1,+$('gpM').value||0);
   if(!name){ alert('증정명을 입력해 주세요.'); return; }
-  if(type==='amtgift'&&!$('gpGift').value){ alert('자동 지급할 증정품을 선택해 주세요.'); return; }
-  const giftStock=Math.max(0,+$('gpStock').value||0);
-  promos().push({id:'pr'+Date.now(), name, type, n, m, x:0, pid:$('gpPid').value, giftPid:(type==='amtgift'?$('gpGift').value:''), giftStock:(type==='amtgift'?giftStock:0), active:true});
-  $('gpName').value=''; $('gpStock').value='0';
+  if(type==='amtgift'&&!$('gpGift').value){ alert("먼저 아래 '🎀 증정품 등록'에서 증정품을 추가한 뒤 선택해 주세요."); return; }
+  promos().push({id:'pr'+Date.now(), name, type, n, m, x:0, pid:$('gpPid').value, giftId:(type==='amtgift'?$('gpGift').value:''), active:true});
+  $('gpName').value='';
   save(); renderGiftPromos(); renderHome();
 }
-function editGiftStock(id,val){ const p=promos().find(x=>x.id===id); if(!p) return; p.giftStock=Math.max(0,+val||0); save(); renderGiftPromos(); }
+function gifts(){ ev().gifts=ev().gifts||[]; return ev().gifts; }
+function promoGiftName(p){
+  if(p.giftId){ const g=gifts().find(x=>x.id===p.giftId); return g?g.name:'(삭제된 증정품)'; }
+  if(p.giftPid){ const pr=ev().products.find(x=>x.id===p.giftPid); return pr?pr.name+(pr.option?'('+pr.option+')':''):'(삭제된 제품)'; }
+  return '증정품';
+}
+function addGift(){
+  const name=$('gfName').value.trim(); const stock=Math.max(0,+$('gfStock').value||0);
+  if(!name){ alert('증정품명을 입력해 주세요.'); return; }
+  gifts().push({id:'gf'+Date.now(), name, stock});
+  $('gfName').value=''; $('gfStock').value='0';
+  save(); renderGifts(); renderGiftPromos();
+}
+function editGiftStock(id,val){ const g=gifts().find(x=>x.id===id); if(!g) return; g.stock=Math.max(0,+val||0); save(); renderGifts(); }
+function delGift(id){ if(!confirm('이 증정품을 삭제할까요?')) return; ev().gifts=gifts().filter(g=>g.id!==id); save(); renderGifts(); renderGiftPromos(); }
+function renderGifts(){
+  if(!$('giftStockRows')) return;
+  const given={}; evOrders().forEach(o=>(o.items||[]).forEach(i=>{ if(i.gift&&i.giftId) given[i.giftId]=(given[i.giftId]||0)+i.qty; }));
+  const list=gifts();
+  const sb=$('giftStockRows'); sb.innerHTML='';
+  $('giftStockEmpty').style.display=list.length?'none':'';
+  list.forEach(g=>{
+    const gv=given[g.id]||0; const lim=(g.stock||0)>0; const rem=(g.stock||0)-gv;
+    const col=!lim?'inherit':(rem<=0?'var(--red)':(rem<=Math.max(1,g.stock*0.2)?'var(--amber)':'inherit'));
+    sb.insertAdjacentHTML('beforeend',`<tr>
+      <td><b>${esc(g.name)}</b></td>
+      <td class="num"><input type="number" min="0" value="${g.stock||0}" style="width:78px;text-align:right;" onchange="editGiftStock('${g.id}',this.value)"></td>
+      <td class="num">${gv}개</td>
+      <td class="num">${lim?`<b style="color:${col};">${rem}개</b>${rem<=0?' <span class="pill p-gray">소진</span>':''}`:'<span style="color:var(--sub);">제한없음</span>'}</td>
+      <td><button class="btn btn-red btn-sm" onclick="delGift('${g.id}')">삭제</button></td></tr>`);
+  });
+}
 function delPromo(id){ if(!confirm('삭제할까요?')) return; ev().promos=promos().filter(p=>p.id!==id); save(); renderPromos(); renderGiftPromos(); renderHome(); }
 function togglePromo(id){ const p=promos().find(x=>x.id===id); p.active=!p.active; save(); renderPromos(); renderGiftPromos(); renderHome(); }
 function promoTarget(p){
@@ -1151,7 +1184,7 @@ function promoTarget(p){
 }
 function promoDesc(p){
   if(p.type==='nm') return `${p.n}개 구매 시 ${p.m}개 증정 (증정품 선택)`;
-  if(p.type==='amtgift'){ const gp=ev().products.find(x=>x.id===p.giftPid); return `${fmt(p.n)}원 이상 구매 시 ${gp?esc(gp.name)+(gp.option?'('+esc(gp.option)+')':''):'증정품'} ${p.m}개 자동 증정`; }
+  if(p.type==='amtgift'){ return `${fmt(p.n)}원 이상 구매 시 ${esc(promoGiftName(p))} ${p.m}개 자동 증정`; }
   if(p.type==='amtset') return `${p.n}개 묶음마다 ${fmt(p.x)}원 할인 (반복 적용)`;
   if(p.type==='amt') return `${p.n}개 이상 구매 시 ${fmt(p.x)}원 할인`;
   return `${p.n}개 이상 구매 시 ${p.x}% 할인`;
@@ -1184,7 +1217,7 @@ function renderPromos(){
 function renderGiftPromos(){
   if(!$('giftRows')) return;
   $('gpPid').innerHTML=GROUP_OPTS();
-  $('gpGift').innerHTML=ev().products.map(p=>`<option value="${p.id}">${esc(p.name)}${p.option?' · '+esc(p.option):''}</option>`).join('');
+  $('gpGift').innerHTML=gifts().length?gifts().map(g=>`<option value="${g.id}">${esc(g.name)}</option>`).join(''):'<option value="">(먼저 아래에서 증정품을 등록하세요)</option>';
   const gp=promos().filter(p=>p.type==='nm'||p.type==='amtgift');
   const tb=$('giftRows'); tb.innerHTML='';
   $('giftEmpty').style.display=gp.length?'none':'';
@@ -1193,20 +1226,6 @@ function renderGiftPromos(){
       <td><b>${esc(p.name)}</b></td><td>${promoDesc(p)}</td><td>${esc(promoTarget(p))}</td>
       <td><span class="pill ${p.active?'p-green':'p-gray'}" style="cursor:pointer;" onclick="togglePromo('${p.id}')">${p.active?'적용 중':'중지'}</span></td>
       <td><button class="btn btn-red btn-sm" onclick="delPromo('${p.id}')">삭제</button></td></tr>`);
-  });
-  const given={}; evOrders().forEach(o=>(o.items||[]).forEach(i=>{ if(i.gift&&i.promo) given[i.promo]=(given[i.promo]||0)+i.qty; }));
-  const st=promos().filter(p=>p.type==='amtgift'&&(p.giftStock||0)>0);
-  const sb=$('giftStockRows'); sb.innerHTML='';
-  $('giftStockEmpty').style.display=st.length?'none':'';
-  st.forEach(p=>{
-    const g=ev().products.find(x=>x.id===p.giftPid); const gv=given[p.name]||0; const rem=(p.giftStock||0)-gv;
-    const col=rem<=0?'var(--red)':(rem<=Math.max(1,(p.giftStock||0)*0.2)?'var(--amber)':'inherit');
-    sb.insertAdjacentHTML('beforeend',`<tr>
-      <td><b>${g?esc(g.name)+(g.option?' · '+esc(g.option):''):'(증정품)'}</b></td>
-      <td>${esc(p.name)}</td>
-      <td class="num"><input type="number" min="0" value="${p.giftStock||0}" style="width:78px;text-align:right;" onchange="editGiftStock('${p.id}',this.value)"></td>
-      <td class="num">${gv}개</td>
-      <td class="num"><b style="color:${col};">${rem}개</b>${rem<=0?' <span class="pill p-gray">소진</span>':''}</td></tr>`);
   });
 }
 function computePromo(items){
@@ -1222,7 +1241,7 @@ function computePromo(items){
       if(cnt>0){ gifts.push({id:p.id,name:p.name,count:cnt}); names.push(p.name); }
     }else if(p.type==='amtgift'){
       const scopeTotal=scope.reduce((s,i)=>s+i.price*i.qty,0);
-      if(scopeTotal>=p.n){ gifts.push({id:p.id,name:p.name,count:p.m,fixedPid:p.giftPid||''}); names.push(p.name); }
+      if(scopeTotal>=p.n){ gifts.push({id:p.id,name:p.name,count:p.m,fixedGiftId:p.giftId||'',fixedPid:p.giftPid||''}); names.push(p.name); }
     }else if(p.type==='amtset'){
       const key=p.pid||'__all__';
       if(!setGroups[key]) setGroups[key]={qty:qty, tiers:[]};
@@ -1402,17 +1421,18 @@ function collectItems(){
   return items;
 }
 let giftSig='';
-function renderGiftSelects(gifts){
-  const sig=JSON.stringify(gifts.map(g=>[g.id,g.count,g.fixedPid||'']));
+function renderGiftSelects(gl){
+  const sig=JSON.stringify(gl.map(g=>[g.id,g.count,g.fixedGiftId||'',g.fixedPid||'']));
   if(sig===giftSig) return;
   giftSig=sig;
   const box=$('kGifts'); box.innerHTML='';
   const opts=ev().products.filter(p=>p.visible!==false).map(p=>`<option value="${p.id}">${esc(p.name)}${p.option?' ('+esc(p.option)+')':''}</option>`).join('');
-  gifts.forEach(g=>{
-    if(g.fixedPid){
-      const gp=ev().products.find(p=>p.id===g.fixedPid);
-      const gname=gp?esc(gp.name)+(gp.option?' ('+esc(gp.option)+')':''):'(삭제된 제품)';
-      box.insertAdjacentHTML('beforeend',`<div class="opt-row gift-fixed" data-promo="${esc(g.name)}" data-pid="${g.fixedPid}" data-count="${g.count}" style="background:#eef3ff;border-radius:6px;padding:9px 11px;margin-top:6px;">
+  gl.forEach(g=>{
+    if(g.fixedGiftId||g.fixedPid){
+      let gname;
+      if(g.fixedGiftId){ const gf=gifts().find(x=>x.id===g.fixedGiftId); gname=gf?esc(gf.name):'(삭제된 증정품)'; }
+      else { const gp=ev().products.find(p=>p.id===g.fixedPid); gname=gp?esc(gp.name)+(gp.option?' ('+esc(gp.option)+')':''):'(삭제된 제품)'; }
+      box.insertAdjacentHTML('beforeend',`<div class="opt-row gift-fixed" data-promo="${esc(g.name)}" data-giftid="${g.fixedGiftId||''}" data-pid="${g.fixedPid||''}" data-count="${g.count}" style="background:#eef3ff;border-radius:6px;padding:9px 11px;margin-top:6px;">
         <span style="font-weight:700;">🎁 ${esc(g.name)}</span>
         <span style="margin-left:auto;">증정품: <b>${gname}</b> ×${g.count} <span style="color:var(--sub);">(자동 증정)</span></span></div>`);
     }else{
@@ -1501,8 +1521,11 @@ async function submitCustOrder(){
     return {pid:p.id,name:p.name,option:p.option,price:0,qty:1,gift:true,promo:s.dataset.promo};
   });
   document.querySelectorAll('#kGifts .gift-fixed').forEach(d=>{
-    const p=ev().products.find(x=>x.id===d.dataset.pid);
-    if(p){ const cnt=Math.max(1,+d.dataset.count||1); for(let i=0;i<cnt;i++) giftItems.push({pid:p.id,name:p.name,option:p.option,price:0,qty:1,gift:true,promo:d.dataset.promo}); }
+    const cnt=Math.max(1,+d.dataset.count||1);
+    let nm='', giftId='', pid='';
+    if(d.dataset.giftid){ const gf=gifts().find(x=>x.id===d.dataset.giftid); if(gf){ nm=gf.name; giftId=gf.id; } }
+    else if(d.dataset.pid){ const p=ev().products.find(x=>x.id===d.dataset.pid); if(p){ nm=p.name; pid=p.id; } }
+    if(nm){ for(let i=0;i<cnt;i++) giftItems.push({giftId,pid,name:nm,option:'',price:0,qty:1,gift:true,promo:d.dataset.promo}); }
   });
   const orderShip=items.reduce((s,i)=>s+(i.ship||0)*i.qty,0);
 
@@ -1755,8 +1778,8 @@ function renderEvRows(){
 /* ── 주문서 인쇄 (LOWLIT 양식) ── */
 function orderSheetHTML(o,pageBreak){
   const s=db.settings;
-  const rows=o.items.map(i=>`<tr>
-    <td><b>${esc(i.name)}</b>${i.gift?' (🎁 증정'+(i.promo?' · '+esc(i.promo):'')+')':''}</td><td>${esc(i.option)||'-'}</td><td>${esc(o.ship)}</td>
+  const rows=o.items.filter(i=>!i.gift).map(i=>`<tr>
+    <td><b>${esc(i.name)}</b></td><td>${esc(i.option)||'-'}</td><td>${esc(o.ship)}</td>
     <td class="num">${i.qty}</td><td class="num">${i.gift?'0 KRW':(i.listPrice>i.price?`<s style="color:#999;">${fmt(i.listPrice)}</s><br>`:'')+fmt(i.price)+' KRW'}</td><td class="num">${fmt(i.price*i.qty)} KRW</td></tr>`).join('')
     +(o.etc?`<tr><td colspan="6">기타: ${esc(o.etc)}</td></tr>`:'');
   return `<div class="ps"${pageBreak?' style="page-break-before:always;"':''}>
@@ -1820,6 +1843,8 @@ function orderSheetHTML(o,pageBreak){
 }
 function printOrder(id){
   const o=db.orders.find(x=>x.id===id);
+  const gi=(o.items||[]).filter(i=>i.gift);
+  if(gi.length){ const gm={}; gi.forEach(i=>{ const k=i.name+(i.option?'('+i.option+')':''); gm[k]=(gm[k]||0)+i.qty; }); alert('🎁 증정품 안내\n\n이 주문에는 아래 증정품을 함께 '+(o.giftShip?'택배로 동봉':'고객에게 증정')+'해 주세요:\n· '+Object.keys(gm).map(k=>k+' ×'+gm[k]).join('\n· ')+'\n\n(주문서에는 인쇄되지 않습니다.)'); }
   $('printArea').innerHTML=orderSheetHTML(o,false);
   setTimeout(()=>window.print(),100);
 }
@@ -2490,7 +2515,7 @@ function delRep(i){
 }
 function renderAll(resetTab=true){
   if(!db.events.length||!ev()) return;
-  renderEvSelect(); renderHome(); renderOrders(); renderStock(); renderProducts(); renderPromos(); renderGiftPromos(); renderEvRows(); renderReps(); renderCouriers();
+  renderEvSelect(); renderHome(); renderOrders(); renderStock(); renderProducts(); renderPromos(); renderGiftPromos(); renderGifts(); renderEvRows(); renderReps(); renderCouriers();
 }
 prTypeUI(); gpTypeUI();
 ['input','change'].forEach(e=>{
