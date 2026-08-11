@@ -176,7 +176,7 @@
 <!-- ════════ 로그인 화면 ════════ -->
 <div id="loginView" style="display:none; text-align:center; padding:120px 20px;">
   <div class="brand" style="font-size:18px; margin-bottom:6px;">lowlit collective</div>
-  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 70</span></p>
+  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 71</span></p>
   <button class="btn btn-dark" style="padding:13px 28px;" onclick="login()">Google 계정으로 로그인</button>
   <p id="loginErr" style="color:var(--red); font-size:12.5px; margin-top:16px;"></p>
 </div>
@@ -626,7 +626,7 @@
         </div>
         <div class="scroll-x">
         <table id="cardTbl">
-          <thead><tr><th>상태</th><th>방문일</th><th>담당자</th><th>이름</th><th>회사 · 직함</th><th>연락처</th><th>메모</th><th>메일</th><th></th></tr></thead>
+          <thead><tr><th>상태</th><th>방문일</th><th>담당자</th><th>이름</th><th>회사 · 직함</th><th>이메일</th><th>메모</th><th>발송</th><th></th></tr></thead>
           <tbody id="cardRows"></tbody>
         </table>
         </div>
@@ -729,7 +729,7 @@
   </div>
   </section>
 
-  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 70</div>
+  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 71</div>
 </div>
 </div>
 
@@ -2276,7 +2276,7 @@ function renderCards(){
       <td style="white-space:nowrap;font-size:12px;">${esc(c.rep)||'-'}</td>
       <td style="white-space:nowrap;"><b>${esc(c.name)||'<span style="color:var(--sub);">(이름 없음)</span>'}</b>${overdue?' <span class="pill p-red" style="font-size:10px;">⏰</span>':''}</td>
       <td style="font-size:12px;">${esc(c.company)||'-'}${c.title?'<br><span style="color:var(--sub);">'+esc(c.title)+'</span>':''}</td>
-      <td style="font-size:12px;white-space:nowrap;">${esc(c.phone)||'-'}</td>
+      <td style="font-size:12px;">${esc(c.email)||'-'}</td>
       <td style="font-size:12px;min-width:240px;max-width:480px;"><div class="memo-clamp">${esc(c.memo)||'-'}</div></td>
       <td style="white-space:nowrap;">${mail}</td>
       <td style="white-space:nowrap;"><button class="btn btn-line btn-sm" onclick="openLead('${c.id}')">상세</button> <button class="btn btn-red btn-sm" onclick="delCard('${c.id}')">✕</button></td></tr>`);
