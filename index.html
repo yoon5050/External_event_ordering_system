@@ -176,7 +176,7 @@
 <!-- ════════ 로그인 화면 ════════ -->
 <div id="loginView" style="display:none; text-align:center; padding:120px 20px;">
   <div class="brand" style="font-size:18px; margin-bottom:6px;">lowlit collective</div>
-  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 55</span></p>
+  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 56</span></p>
   <button class="btn btn-dark" style="padding:13px 28px;" onclick="login()">Google 계정으로 로그인</button>
   <p id="loginErr" style="color:var(--red); font-size:12.5px; margin-top:16px;"></p>
 </div>
@@ -543,6 +543,7 @@
         <button class="btn btn-dark btn-sm" onclick="document.getElementById('cardFile').click()">📷 명함 촬영/사진 첨부</button>
         <span id="cardUploadStatus" style="font-size:12px;color:var(--sub);"></span>
       </div>
+      <div class="row" style="margin-bottom:8px;"><div><label class="f">이 전시 명함 저장 폴더 <span style="font-weight:400;color:var(--sub);">(드라이브 폴더 링크/ID · 비우면 전시 이름 폴더 자동)</span></label><input type="text" id="cardFolderId" placeholder="https://drive.google.com/drive/folders/... 또는 폴더 ID" onchange="if(ev()){ev().cardFolder=this.value.trim(); save();}"></div></div>
       <div class="row">
         <div style="max-width:220px;"><label class="f">담당자(등록자)</label><select id="regRep"><option value="">담당자 선택</option></select></div>
       </div>
@@ -673,7 +674,7 @@
   </div>
   </section>
 
-  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 55</div>
+  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 56</div>
 </div>
 </div>
 
@@ -2049,13 +2050,14 @@ function sendLeadFromList(id, stage){
   if(!confirm((stage===2?'2차 컨택':'1차 자료')+' 메일을 '+c.email+' 로 보낼까요?')) return;
   sendLeadMail(c, mats, stage).then(()=>alert((stage===2?'2차':'1차')+' 메일을 보냈습니다 ✅')).catch(e=>{ if(e&&(e.text||e.message)&&String(e.message).indexOf('not ready')<0&&String(e.message).indexOf('template')<0&&String(e.message).indexOf('no email')<0) alert('발송 실패: '+(e.text||e.message)); });
 }
+function extractFolderId(v){ v=String(v||'').trim(); const m=v.match(/\/folders\/([-\w]{20,})/)||v.match(/[?&]id=([-\w]{20,})/); return m?m[1]:v; }
 function uploadToDrive(card){
   const url=db.settings.driveScriptUrl;
   if(!url) return;
   try{
     const b64=(card.img||'').split(',')[1]||'';
     const memoPart=card.memo?('_'+card.memo.replace(/[\\/:*?"<>|]/g,' ').slice(0,30)):'';
-    const payload={ eventName:ev().name, fileName:'명함_'+card.ts.slice(0,16).replace(/[:T-]/g,'')+memoPart+'.jpg', mimeType:'image/jpeg', dataBase64:b64, memo:card.memo||'', ts:card.ts };
+    const payload={ eventName:ev().name, folderId:extractFolderId(ev().cardFolder||''), fileName:'명함_'+card.ts.slice(0,16).replace(/[:T-]/g,'')+memoPart+'.jpg', mimeType:'image/jpeg', dataBase64:b64, memo:card.memo||'', ts:card.ts };
     fetch(url,{ method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify(payload) })
       .catch(e=>console.warn('드라이브 업로드 실패:',e));
   }catch(e){ console.warn('드라이브 업로드 오류:',e); }
@@ -2093,6 +2095,7 @@ function renderCards(){
   if(!$('cardGallery')) return;
   $('cardEvName').textContent='· '+ev().name;
   syncRepSelect();
+  if($('cardFolderId')) $('cardFolderId').value=(ev().cardFolder||'');
   let list=cardsList();
   const cnt={}; CARD_STATUS.forEach(s=>cnt[s]=0);
   list.forEach(c=>{ const s=c.status||'신규'; cnt[s]=(cnt[s]||0)+1; });
