@@ -176,7 +176,7 @@
 <!-- ════════ 로그인 화면 ════════ -->
 <div id="loginView" style="display:none; text-align:center; padding:120px 20px;">
   <div class="brand" style="font-size:18px; margin-bottom:6px;">lowlit collective</div>
-  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 59</span></p>
+  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 61</span></p>
   <button class="btn btn-dark" style="padding:13px 28px;" onclick="login()">Google 계정으로 로그인</button>
   <p id="loginErr" style="color:var(--red); font-size:12.5px; margin-top:16px;"></p>
 </div>
@@ -344,13 +344,11 @@
     </div>
 
     <div class="card">
-      <h2>🎁 이벤트 할인 <span class="hint">이 전시의 주문에 자동 적용 · 전시마다 따로 등록</span></h2>
+      <h2>🏷️ 이벤트 할인 <span class="hint">금액·수량 할인 · 이 전시 주문에 자동 적용 · 전시마다 따로 등록</span></h2>
       <div class="row">
-        <div style="flex:1.5;"><label class="f">이벤트명 *</label><input type="text" id="prName" placeholder="예: 3+1 이벤트"></div>
+        <div style="flex:1.5;"><label class="f">할인명 *</label><input type="text" id="prName" placeholder="예: 2개 이상 5천원 할인"></div>
         <div style="flex:1.5;"><label class="f">유형</label>
           <select id="prType" onchange="prTypeUI()">
-            <option value="nm">N개 구매 시 M개 무료 (3+1 등)</option>
-            <option value="amtgift">N원 이상 구매 시 증정품 M개</option>
             <option value="amt">N개 이상 구매 시 정액 할인</option>
             <option value="amtset">N개 묶음마다 정액 할인 (세트·반복)</option>
             <option value="pct">N개 이상 구매 시 % 할인</option>
@@ -358,21 +356,56 @@
         </div>
       </div>
       <div class="row">
-        <div><label class="f" id="prNLabel">N (기준 수량)</label><input type="number" id="prN" min="1" value="3"></div>
-        <div id="prMWrap"><label class="f" id="prMLabel">M (무료 수량)</label><input type="number" id="prM" min="1" value="1"></div>
-        <div id="prXWrap" style="display:none;"><label class="f" id="prXLabel">할인액 (원)</label><input type="number" id="prX" min="0"></div>
-        <div id="prGiftWrap" style="display:none;flex:1.5;"><label class="f">증정품 (자동 지급)</label><select id="prGift"></select></div>
+        <div><label class="f" id="prNLabel">N (기준 수량)</label><input type="number" id="prN" min="1" value="2"></div>
+        <div id="prXWrap"><label class="f" id="prXLabel">할인액 (원)</label><input type="number" id="prX" min="0"></div>
         <div style="flex:1.5;"><label class="f">대상 제품</label><select id="prPid"><option value="">전체 제품 합산</option></select></div>
       </div>
-      <button class="btn btn-dark btn-sm" onclick="addPromo()">이벤트 추가</button>
-      <p style="font-size:11.5px;color:var(--sub);margin-top:8px;">N+M 무료는 묶음마다 반복 적용되고, 무료 품목은 저렴한 것부터 적용됩니다. 정액/% 할인은 주문당 1회 적용되며, <b>같은 대상에 여러 단계(예: 2개·4개)를 걸면 가장 큰 할인 하나만 적용</b>됩니다. 대상 제품에서 <b>[그룹]</b>을 고르면 색상·옵션 전체 수량을 합산해 적용합니다(예: 캐피블럭 전체). <b>N원 이상 구매 시 증정품</b>은 주문 금액(대상 기준)이 기준 금액 이상이면 증정 수량만큼 증정품을 고르게 합니다. <b>N개 묶음마다 정액 할인(세트)</b>은 큰 묶음부터 채우고 남는 수량에 작은 묶음을 적용해요(예: 6개 = 4개묶음+2개묶음).</p>
+      <button class="btn btn-dark btn-sm" onclick="addPromo()">할인 추가</button>
+      <p style="font-size:11.5px;color:var(--sub);margin-top:8px;">정액/% 할인은 주문당 1회 적용되며, <b>같은 대상에 여러 단계(예: 2개·4개)를 걸면 가장 큰 할인 하나만 적용</b>됩니다. 대상 제품에서 <b>[그룹]</b>을 고르면 색상·옵션 전체 수량을 합산해 적용합니다(예: 캐피블럭 전체). <b>N개 묶음마다 정액 할인(세트)</b>은 큰 묶음부터 채우고 남는 수량에 작은 묶음을 적용해요(예: 6개 = 4개묶음+2개묶음).</p>
       <div class="scroll-x" style="margin-top:12px;">
       <table>
-        <thead><tr><th>이벤트명</th><th>내용</th><th>대상</th><th>적용가</th><th>상태</th><th></th></tr></thead>
+        <thead><tr><th>할인명</th><th>내용</th><th>대상</th><th>적용가</th><th>상태</th><th></th></tr></thead>
         <tbody id="promoRows"></tbody>
       </table>
       </div>
-      <div class="empty" id="promoEmpty" style="display:none;">등록된 이벤트가 없습니다.</div>
+      <div class="empty" id="promoEmpty" style="display:none;">등록된 할인이 없습니다.</div>
+    </div>
+
+    <div class="card">
+      <h2>🎁 증정 이벤트 <span class="hint">사은품 증정 · 이 전시 주문에 자동 적용 · 전시마다 따로 등록</span></h2>
+      <div class="row">
+        <div style="flex:1.5;"><label class="f">증정명 *</label><input type="text" id="gpName" placeholder="예: 5만원 이상 사은품 증정"></div>
+        <div style="flex:1.5;"><label class="f">유형</label>
+          <select id="gpType" onchange="gpTypeUI()">
+            <option value="amtgift">N원 이상 구매 시 증정품 M개</option>
+            <option value="nm">N개 구매 시 M개 무료 (3+1 등)</option>
+          </select>
+        </div>
+      </div>
+      <div class="row">
+        <div><label class="f" id="gpNLabel">기준 금액 (원)</label><input type="number" id="gpN" min="1" value="50000"></div>
+        <div><label class="f" id="gpMLabel">증정 수량 (개)</label><input type="number" id="gpM" min="1" value="1"></div>
+        <div id="gpGiftWrap" style="flex:1.5;"><label class="f">증정품 (자동 지급)</label><select id="gpGift"></select></div>
+        <div id="gpStockWrap"><label class="f">준비수량 <span style="font-weight:400;color:var(--sub);">(0=제한없음)</span></label><input type="number" id="gpStock" min="0" value="0"></div>
+        <div style="flex:1.5;"><label class="f">대상 제품</label><select id="gpPid"><option value="">전체 제품 합산</option></select></div>
+      </div>
+      <button class="btn btn-dark btn-sm" onclick="addGiftPromo()">증정 추가</button>
+      <p style="font-size:11.5px;color:var(--sub);margin-top:8px;"><b>N원 이상 구매 시 증정품</b>은 주문 금액(대상 기준)이 기준 금액 이상이면 지정한 증정품이 자동 지급됩니다. <b>준비수량</b>을 넣으면 아래 재고표에서 지급·잔여가 집계돼요(0이면 제한없음). <b>N개 구매 시 M개 무료</b>는 묶음마다 반복 적용되고, 무료 품목은 주문 시 선택합니다.</p>
+      <div class="scroll-x" style="margin-top:12px;">
+      <table>
+        <thead><tr><th>증정명</th><th>내용</th><th>대상</th><th>상태</th><th></th></tr></thead>
+        <tbody id="giftRows"></tbody>
+      </table>
+      </div>
+      <div class="empty" id="giftEmpty" style="display:none;">등록된 증정 이벤트가 없습니다.</div>
+      <h2 style="font-size:15px;margin-top:22px;">📦 증정품 재고 <span class="hint">준비수량 대비 지급·잔여</span></h2>
+      <div class="scroll-x" style="margin-top:8px;">
+      <table>
+        <thead><tr><th>증정품</th><th>증정 이벤트</th><th class="num">준비수량</th><th class="num">지급</th><th class="num">잔여</th></tr></thead>
+        <tbody id="giftStockRows"></tbody>
+      </table>
+      </div>
+      <div class="empty" id="giftStockEmpty" style="display:none;">준비수량이 있는 증정품이 없습니다. 위 '준비수량'을 입력하면 여기에 재고가 집계됩니다.</div>
     </div>
   </section>
 
@@ -639,6 +672,10 @@
         <div id="kGifts"></div>
       </div>
 
+      <div class="cf"><label>증정품 발송</label>
+        <label class="opt-row" style="cursor:pointer;"><input type="checkbox" id="kGiftShip"><span style="font-weight:400;">🎁📦 증정품을 제품과 함께 택배로 발송 (현장 미전달·재고 소진 등)</span></label>
+      </div>
+
       <div class="cf"><label>결제수단 <span class="req">*</span></label>
         <div class="opt-row"><input type="radio" name="kPay" value="카드" id="kp1"><label for="kp1" style="font-weight:400;">카드</label></div>
         <div class="opt-row"><input type="radio" name="kPay" value="현금" id="kp2"><label for="kp2" style="font-weight:400;">현금(현금영수증 확인필요)</label></div>
@@ -680,7 +717,7 @@
   </div>
   </section>
 
-  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 59</div>
+  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 61</div>
 </div>
 </div>
 
@@ -1068,27 +1105,39 @@ function downloadTemplate(){
 function promos(){ ev().promos=ev().promos||[]; return ev().promos; }
 function prTypeUI(){
   const t=$('prType').value;
-  const giftLike=(t==='nm'||t==='amtgift');
-  $('prMWrap').style.display=giftLike?'':'none';
-  $('prXWrap').style.display=giftLike?'none':'';
   $('prXLabel').textContent=t==='pct'?'할인율 (%)':'할인액 (원)';
-  $('prNLabel').textContent=t==='amtgift'?'기준 금액 (원)':(t==='amtset'?'묶음 수량 (N개마다)':'N (기준 수량)');
-  $('prMLabel').textContent=t==='amtgift'?'증정 수량 (개)':'M (무료 수량)';
-  $('prGiftWrap').style.display=t==='amtgift'?'':'none';
+  $('prNLabel').textContent=(t==='amtset')?'묶음 수량 (N개마다)':'N (기준 수량)';
+}
+function gpTypeUI(){
+  const amt=($('gpType').value==='amtgift');
+  $('gpNLabel').textContent=amt?'기준 금액 (원)':'N (기준 수량)';
+  $('gpMLabel').textContent=amt?'증정 수량 (개)':'M (무료 수량)';
+  $('gpGiftWrap').style.display=amt?'':'none';
+  $('gpStockWrap').style.display=amt?'':'none';
 }
 function addPromo(){
   const name=$('prName').value.trim(), type=$('prType').value;
-  const n=Math.max(1,+$('prN').value||0), m=Math.max(1,+$('prM').value||0), x=Math.max(0,+$('prX').value||0);
-  if(!name){ alert('이벤트명을 입력해 주세요.'); return; }
-  if((type==='amt'||type==='pct'||type==='amtset')&&!x){ alert('할인값을 입력해 주세요.'); return; }
+  const n=Math.max(1,+$('prN').value||0), x=Math.max(0,+$('prX').value||0);
+  if(!name){ alert('할인명을 입력해 주세요.'); return; }
+  if(!x){ alert('할인값을 입력해 주세요.'); return; }
   if(type==='pct'&&x>100){ alert('할인율은 100% 이하로 입력해 주세요.'); return; }
-  if(type==='amtgift'&&!$('prGift').value){ alert('자동 지급할 증정품을 선택해 주세요.'); return; }
-  promos().push({id:'pr'+Date.now(), name, type, n, m, x, pid:$('prPid').value, giftPid:(type==='amtgift'?$('prGift').value:''), active:true});
+  promos().push({id:'pr'+Date.now(), name, type, n, m:1, x, pid:$('prPid').value, active:true});
   $('prName').value=''; $('prX').value='';
   save(); renderPromos(); renderHome();
 }
-function delPromo(id){ if(!confirm('이벤트를 삭제할까요?')) return; ev().promos=promos().filter(p=>p.id!==id); save(); renderPromos(); renderHome(); }
-function togglePromo(id){ const p=promos().find(x=>x.id===id); p.active=!p.active; save(); renderPromos(); renderHome(); }
+function addGiftPromo(){
+  const name=$('gpName').value.trim(), type=$('gpType').value;
+  const n=Math.max(1,+$('gpN').value||0), m=Math.max(1,+$('gpM').value||0);
+  if(!name){ alert('증정명을 입력해 주세요.'); return; }
+  if(type==='amtgift'&&!$('gpGift').value){ alert('자동 지급할 증정품을 선택해 주세요.'); return; }
+  const giftStock=Math.max(0,+$('gpStock').value||0);
+  promos().push({id:'pr'+Date.now(), name, type, n, m, x:0, pid:$('gpPid').value, giftPid:(type==='amtgift'?$('gpGift').value:''), giftStock:(type==='amtgift'?giftStock:0), active:true});
+  $('gpName').value=''; $('gpStock').value='0';
+  save(); renderGiftPromos(); renderHome();
+}
+function editGiftStock(id,val){ const p=promos().find(x=>x.id===id); if(!p) return; p.giftStock=Math.max(0,+val||0); save(); renderGiftPromos(); }
+function delPromo(id){ if(!confirm('삭제할까요?')) return; ev().promos=promos().filter(p=>p.id!==id); save(); renderPromos(); renderGiftPromos(); renderHome(); }
+function togglePromo(id){ const p=promos().find(x=>x.id===id); p.active=!p.active; save(); renderPromos(); renderGiftPromos(); renderHome(); }
 function promoTarget(p){
   if(!p.pid) return '전체 제품';
   if(String(p.pid).startsWith('g:')) return p.pid.slice(2)+' (전체 옵션)';
@@ -1113,17 +1162,46 @@ function promoPrice(p){
   if(p.type==='amt') return `${p.n}개 기준 ${fmt(pr.price*p.n-p.x)}원`;
   return `${p.n}개 기준 ${fmt(Math.round(pr.price*p.n*(100-p.x)/100))}원`;
 }
+const GROUP_OPTS=()=>'<option value="">전체 제품 합산</option>'+[...new Set(ev().products.map(p=>p.name))].map(n=>`<option value="g:${esc(n)}">[그룹] ${esc(n)} (전체 옵션 합산)</option>`).join('')+ev().products.map(p=>`<option value="${p.id}">${esc(p.name)}${p.option?' · '+esc(p.option):''}</option>`).join('');
 function renderPromos(){
-  $('prPid').innerHTML='<option value="">전체 제품 합산</option>'+[...new Set(ev().products.map(p=>p.name))].map(n=>`<option value="g:${esc(n)}">[그룹] ${esc(n)} (전체 옵션 합산)</option>`).join('')+ev().products.map(p=>`<option value="${p.id}">${esc(p.name)}${p.option?' · '+esc(p.option):''}</option>`).join('');
-  $('prGift').innerHTML=ev().products.map(p=>`<option value="${p.id}">${esc(p.name)}${p.option?' · '+esc(p.option):''}</option>`).join('');
+  $('prPid').innerHTML=GROUP_OPTS();
+  const dp=promos().filter(p=>p.type==='amt'||p.type==='pct'||p.type==='amtset');
   const tb=$('promoRows'); tb.innerHTML='';
-  $('promoEmpty').style.display=promos().length?'none':'';
-  promos().forEach(p=>{
+  $('promoEmpty').style.display=dp.length?'none':'';
+  dp.forEach(p=>{
     tb.insertAdjacentHTML('beforeend',`<tr>
       <td><b>${esc(p.name)}</b></td><td>${promoDesc(p)}</td><td>${esc(promoTarget(p))}</td>
       <td style="font-size:12px;">${promoPrice(p)||'-'}</td>
       <td><span class="pill ${p.active?'p-green':'p-gray'}" style="cursor:pointer;" onclick="togglePromo('${p.id}')">${p.active?'적용 중':'중지'}</span></td>
       <td><button class="btn btn-red btn-sm" onclick="delPromo('${p.id}')">삭제</button></td></tr>`);
+  });
+}
+function renderGiftPromos(){
+  if(!$('giftRows')) return;
+  $('gpPid').innerHTML=GROUP_OPTS();
+  $('gpGift').innerHTML=ev().products.map(p=>`<option value="${p.id}">${esc(p.name)}${p.option?' · '+esc(p.option):''}</option>`).join('');
+  const gp=promos().filter(p=>p.type==='nm'||p.type==='amtgift');
+  const tb=$('giftRows'); tb.innerHTML='';
+  $('giftEmpty').style.display=gp.length?'none':'';
+  gp.forEach(p=>{
+    tb.insertAdjacentHTML('beforeend',`<tr>
+      <td><b>${esc(p.name)}</b></td><td>${promoDesc(p)}</td><td>${esc(promoTarget(p))}</td>
+      <td><span class="pill ${p.active?'p-green':'p-gray'}" style="cursor:pointer;" onclick="togglePromo('${p.id}')">${p.active?'적용 중':'중지'}</span></td>
+      <td><button class="btn btn-red btn-sm" onclick="delPromo('${p.id}')">삭제</button></td></tr>`);
+  });
+  const given={}; evOrders().forEach(o=>(o.items||[]).forEach(i=>{ if(i.gift&&i.promo) given[i.promo]=(given[i.promo]||0)+i.qty; }));
+  const st=promos().filter(p=>p.type==='amtgift'&&(p.giftStock||0)>0);
+  const sb=$('giftStockRows'); sb.innerHTML='';
+  $('giftStockEmpty').style.display=st.length?'none':'';
+  st.forEach(p=>{
+    const g=ev().products.find(x=>x.id===p.giftPid); const gv=given[p.name]||0; const rem=(p.giftStock||0)-gv;
+    const col=rem<=0?'var(--red)':(rem<=Math.max(1,(p.giftStock||0)*0.2)?'var(--amber)':'inherit');
+    sb.insertAdjacentHTML('beforeend',`<tr>
+      <td><b>${g?esc(g.name)+(g.option?' · '+esc(g.option):''):'(증정품)'}</b></td>
+      <td>${esc(p.name)}</td>
+      <td class="num"><input type="number" min="0" value="${p.giftStock||0}" style="width:78px;text-align:right;" onchange="editGiftStock('${p.id}',this.value)"></td>
+      <td class="num">${gv}개</td>
+      <td class="num"><b style="color:${col};">${rem}개</b>${rem<=0?' <span class="pill p-gray">소진</span>':''}</td></tr>`);
   });
 }
 function computePromo(items){
@@ -1373,6 +1451,7 @@ function resetCustForm(){
   giftSig=''; $('kGifts').innerHTML='';
   closePostcode();
   $('kEtcChk').checked=false; $('kConsent').checked=false; $('kNoticeChk').checked=false;
+  if($('kGiftShip')) $('kGiftShip').checked=false;
   document.querySelectorAll('input[name="kPay"]').forEach(r=>r.checked=false);
   if($('kr1')){ $('kr1').checked=true; onReceiptChange(); }
   syncRepSelect(); $('kRep').value=''; $('kShipNotice').value=db.settings.shipNote||DEFAULT_SHIPNOTE;
@@ -1445,7 +1524,7 @@ async function submitCustOrder(){
     discount:Math.max(0,+$('kDiscount').value||0),
     shipFee:orderShip,
     customer:{name,phone,email:'',addr},
-    receipt, hopeDate:$('kHopeDate').value, shipMemo:$('kShipMemo').value.trim(), pay, ship:'상품준비', consent:true, noticeAgree:true,
+    receipt, giftShip:$('kGiftShip').checked, hopeDate:$('kHopeDate').value, shipMemo:$('kShipMemo').value.trim(), pay, ship:'상품준비', consent:true, noticeAgree:true,
     rep, shipNotice:$('kShipNotice').value.trim(),
     staffMemo:$('kStaffMemo').value.trim(), memoBad:'', memoWhy:''
   };
@@ -1473,7 +1552,7 @@ function renderOrders(){
     const shipCls=o.ship==='발송완료'?'p-blue':'p-gray';
     const memo=[o.staffMemo&&('📌 '+o.staffMemo), o.memoBad&&('😕 '+o.memoBad), o.memoWhy&&('💡 '+o.memoWhy)].filter(Boolean).join('\n');
     tb.insertAdjacentHTML('beforeend',`<tr style="${o.hopeDate?'background:#fff3df;':''}border-left:5px solid ${o.receipt==='현장수령'?'#2e9e6b':'#3b7fd4'};">
-      <td><b>${o.no}</b><br><span class="pill ${o.receipt==='현장수령'?'p-green':'p-blue'}" style="margin-top:3px;display:inline-block;white-space:nowrap;">${o.receipt==='현장수령'?'🏬 현장수령':'🚚 배송'}</span>${o.hopeDate?'<br><span class="pill p-amber" style="margin-top:3px;display:inline-block;white-space:nowrap;">🗓️ 희망 '+o.hopeDate.slice(5)+'</span>':''}</td>
+      <td><b>${o.no}</b><br><span class="pill ${o.receipt==='현장수령'?'p-green':'p-blue'}" style="margin-top:3px;display:inline-block;white-space:nowrap;">${o.receipt==='현장수령'?'🏬 현장수령':'🚚 배송'}</span>${o.hopeDate?'<br><span class="pill p-amber" style="margin-top:3px;display:inline-block;white-space:nowrap;">🗓️ 희망 '+o.hopeDate.slice(5)+'</span>':''}${o.giftShip?'<br><span class="pill" style="background:#efe3ff;color:#6b3fa0;margin-top:3px;display:inline-block;white-space:nowrap;font-weight:700;">🎁📦 증정품 택배</span>':''}</td>
       <td style="white-space:nowrap;">${o.ts.slice(5,10)} ${o.ts.slice(11,16)}</td>
       <td><b>${esc(o.customer.name)}</b><br><span style="color:var(--sub);font-size:11.5px;white-space:nowrap;">${esc(o.customer.phone)}</span>${o.rep?'<br><span style="color:var(--sub);font-size:11px;white-space:nowrap;">🧑‍💼 '+esc(o.rep)+'</span>':''}</td>
       <td style="max-width:230px;">${items}</td>
@@ -1560,7 +1639,7 @@ function openDetail(id){
   const _gm={}; o.items.filter(i=>i.gift).forEach(i=>{ const k=esc(i.name)+(i.option?'('+esc(i.option)+')':''); _gm[k]=(_gm[k]||0)+i.qty; });
   const _gk=Object.keys(_gm);
   $('dlgContent').innerHTML=`
-    ${_gk.length?`<div style="background:#fff3df;border:2px solid #e08a1e;border-radius:8px;padding:10px 12px;margin-bottom:10px;color:#a35a00;font-weight:700;font-size:13px;">🎁 증정품 전달 필요 — ${_gk.map(k=>k+' ×'+_gm[k]).join(', ')}<div style="font-weight:400;font-size:12px;color:#8a744f;margin-top:3px;">주문서에는 표시되지 않아요. 고객에게 증정품을 꼭 함께 전달하세요.</div></div>`:''}
+    ${_gk.length?`<div style="background:${o.giftShip?'#f6f0ff':'#fff3df'};border:2px solid ${o.giftShip?'#9a6bce':'#e08a1e'};border-radius:8px;padding:10px 12px;margin-bottom:10px;color:${o.giftShip?'#6b3fa0':'#a35a00'};font-weight:700;font-size:13px;">${o.giftShip?'🎁📦 증정품 택배 동봉':'🎁 증정품 전달 필요'} — ${_gk.map(k=>k+' ×'+_gm[k]).join(', ')}<div style="font-weight:400;font-size:12px;color:#8a744f;margin-top:3px;">${o.giftShip?'제품과 함께 택배로 발송하세요.':'주문서에는 표시되지 않아요. 고객에게 증정품을 꼭 함께 전달하세요.'}</div></div>`:''}
     <p style="font-size:13px;line-height:1.9;">
       <b>${esc(o.customer.name)}</b> · ${esc(o.customer.phone)}${o.customer.email?' · '+esc(o.customer.email):''}<br>
       📦 ${esc(o.customer.addr)}${o.shipMemo?'<br>🚪 배송 메모: '+esc(o.shipMemo):''}<br>
@@ -1578,7 +1657,10 @@ function openDetail(id){
       <div><label class="f">😕 아쉬워했던 점</label><textarea id="dBad">${esc(o.memoBad)}</textarea></div>
       <div><label class="f">💡 구매를 고려하게 한 점</label><textarea id="dWhy">${esc(o.memoWhy)}</textarea></div>
     </div>
-    <div style="display:flex; gap:8px; justify-content:flex-end;">
+    <div style="margin-top:8px;padding:9px 11px;background:#f6f0ff;border:1px solid #e2d4f5;border-radius:8px;">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:600;color:#6b3fa0;"><input type="checkbox" id="dGiftShip" style="width:16px;height:16px;accent-color:#6b3fa0;" ${o.giftShip?'checked':''}> 🎁📦 증정품을 제품과 함께 택배로 발송 (현장 미전달·재고 소진 등)</label>
+    </div>
+    <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:10px;">
       <button class="btn btn-dark btn-sm" onclick="saveDetailMemo('${o.id}')">메모 저장</button>
     </div>`;
   dlg.showModal();
@@ -1587,6 +1669,7 @@ function saveDetailMemo(id){
   const o=db.orders.find(x=>x.id===id);
   o.staffMemo=$('dStaff').value.trim(); o.memoBad=$('dBad').value.trim(); o.memoWhy=$('dWhy').value.trim();
   o.discount=Math.max(0,+$('dDiscount').value||0);
+  o.giftShip=$('dGiftShip').checked;
   saveOrderDoc(o); dlg.close(); renderOrders(); renderHome();
 }
 
@@ -1692,7 +1775,7 @@ function orderSheetHTML(o,pageBreak){
         <p>${esc(o.customer.name)}<br>${o.customer.email?esc(o.customer.email)+'<br>':''}${esc(o.customer.phone)}</p>
         <div class="ps-sub">
           <div class="ps-h">추가정보</div>
-          <p>${o.hopeDate?'희망 배송일 : '+o.hopeDate:''}${o.hopeDate&&o.shipMemo?'<br>':''}${o.shipMemo?'배송 메모 : '+esc(o.shipMemo):''}${!o.hopeDate&&!o.shipMemo?'-':''}</p>
+          <p>${o.hopeDate?'희망 배송일 : '+o.hopeDate:''}${o.hopeDate&&o.shipMemo?'<br>':''}${o.shipMemo?'배송 메모 : '+esc(o.shipMemo):''}${o.giftShip?((o.hopeDate||o.shipMemo)?'<br>':'')+'🎁 증정품 택배 동봉 필요':''}${!o.hopeDate&&!o.shipMemo&&!o.giftShip?'-':''}</p>
         </div>
       </div>
     </div>
@@ -2257,9 +2340,9 @@ async function extractCardInfo(card){
 
 /* ── 엑셀 내보내기 ── */
 function exportXlsx(){
-  const oRows=[['전시','주문번호','접수일시','판매담당자','구매자','연락처','이메일','배송주소','수령방법','희망배송일','배송메모','제품명','옵션','단가','수량','금액','기타구매품','주문합계','이벤트할인','이벤트명','할인','배송비','결제금액','결제수단','발송상태','담당자메모','아쉬운점','구매결정요인']];
+  const oRows=[['전시','주문번호','접수일시','판매담당자','구매자','연락처','이메일','배송주소','수령방법','희망배송일','배송메모','증정품택배','제품명','옵션','단가','수량','금액','기타구매품','주문합계','이벤트할인','이벤트명','할인','배송비','결제금액','결제수단','발송상태','담당자메모','아쉬운점','구매결정요인']];
   evOrders().slice().reverse().forEach(o=>{
-    const base=[ev().name,o.no,o.ts.slice(0,16).replace('T',' '),o.rep||'',o.customer.name,o.customer.phone,o.customer.email,o.customer.addr,o.receipt||'배송',o.hopeDate,o.shipMemo||''];
+    const base=[ev().name,o.no,o.ts.slice(0,16).replace('T',' '),o.rep||'',o.customer.name,o.customer.phone,o.customer.email,o.customer.addr,o.receipt||'배송',o.hopeDate,o.shipMemo||'',o.giftShip?'택배동봉':''];
     if(o.items.length) o.items.forEach((i,n)=>{
       oRows.push([...base, i.name+(i.gift?' (증정)':''), i.option, i.price, i.qty, i.price*i.qty,
         n===0?o.etc:'', n===0?o.total:'', n===0?(o.promoDiscount||0):'', n===0?((o.promoNames||[]).join(', ')):'', n===0?(o.discount||0):'', n===0?(o.shipFee||0):'', n===0?paid(o):'', o.pay, o.ship,
@@ -2393,9 +2476,9 @@ function delRep(i){
 }
 function renderAll(resetTab=true){
   if(!db.events.length||!ev()) return;
-  renderEvSelect(); renderHome(); renderOrders(); renderStock(); renderProducts(); renderPromos(); renderEvRows(); renderReps(); renderCouriers();
+  renderEvSelect(); renderHome(); renderOrders(); renderStock(); renderProducts(); renderPromos(); renderGiftPromos(); renderEvRows(); renderReps(); renderCouriers();
 }
-prTypeUI();
+prTypeUI(); gpTypeUI();
 ['input','change'].forEach(e=>{
   $('kProducts').addEventListener(e,updateCustSummary);
   $('kDiscount').addEventListener(e,updateCustSummary);
