@@ -176,7 +176,7 @@
 <!-- ════════ 로그인 화면 ════════ -->
 <div id="loginView" style="display:none; text-align:center; padding:120px 20px;">
   <div class="brand" style="font-size:18px; margin-bottom:6px;">lowlit collective</div>
-  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 54</span></p>
+  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 55</span></p>
   <button class="btn btn-dark" style="padding:13px 28px;" onclick="login()">Google 계정으로 로그인</button>
   <p id="loginErr" style="color:var(--red); font-size:12.5px; margin-top:16px;"></p>
 </div>
@@ -673,7 +673,7 @@
   </div>
   </section>
 
-  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 54</div>
+  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 55</div>
 </div>
 </div>
 
@@ -1879,7 +1879,7 @@ function printAllOrders(){
 
 /* ── 명함첩 ── */
 function cardsList(){ return db.cards.filter(c=>c.eventId===db.currentEventId); }
-let pendingCardImg='';
+let pendingCardImg=''; let cardImgDriveDone='';
 function toggleCardList(){
   const b=$('cardListBody'), tg=$('cardListToggle'); if(!b||!tg) return;
   const hide=b.style.display!=='none';
@@ -1910,7 +1910,8 @@ function uploadCardToForm(input){
     img.onload=()=>{
       try{ pendingCardImg=compressCardImg(img); }
       catch(err){ if(status) status.textContent='사진 처리 실패: '+(err&&err.message?err.message:err); input.value=''; return; }
-      if(status) status.textContent='✅ 사진 첨부됨'+(db.settings.geminiKey?' · 정보 자동 인식 중…':' · (자동입력하려면 설정에 Gemini 키 입력)');
+      if(db.settings.driveScriptUrl){ try{ uploadToDrive({img:pendingCardImg, ts:nowLocal(), memo:''}); cardImgDriveDone=pendingCardImg; }catch(_){} }
+      if(status) status.textContent='✅ 사진 첨부됨'+(db.settings.driveScriptUrl?' · 드라이브 저장됨':'')+(db.settings.geminiKey?' · 정보 자동 인식 중…':' · (자동입력하려면 설정에 Gemini 키 입력)');
       extractCardToForm(pendingCardImg);
       input.value='';
     };
@@ -1954,7 +1955,7 @@ function resetLeadForm(){
   ['regName','regCompany','regTitle','regEmail','regPhone','regMemo','mat_etc_text'].forEach(i=>{ if($(i)) $(i).value=''; });
   if($('regRep')) $('regRep').value='';
   ['mat_company','mat_catalog','mat_lookbook','mat_cappie','mat_presskit','mat_etc'].forEach(i=>{ if($(i)) $(i).checked=false; });
-  pendingCardImg='';
+  pendingCardImg=''; cardImgDriveDone='';
 }
 function registerLead(send){
   const gv=id=>{ const el=$(id); return el?el.value.trim():''; };
@@ -1971,7 +1972,7 @@ function registerLead(send){
   if(!fs){ alert('서버 연결을 확인해 주세요.'); return; }
   const memoFull=memo+((mats.length)?((memo?'\n':'')+'📎 발송자료: '+mats.join(', ')):'');
   const card={id:'c'+Date.now()+Math.random().toString(36).slice(2,5), eventId:db.currentEventId, ts:nowLocal(), name, company, title, email, phone, rep, interest:'', status:'신규', followUp:'', memo:memoFull, mail1Sent:'', mail2Sent:'', img:pendingCardImg||''};
-  fs.collection('cards').doc(card.id).set(clean(card)).then(()=>{ if(card.img) uploadToDrive(card); }).catch(e=>alert('저장 실패: '+e.message));
+  fs.collection('cards').doc(card.id).set(clean(card)).then(()=>{ if(card.img && card.img!==cardImgDriveDone) uploadToDrive(card); }).catch(e=>alert('저장 실패: '+e.message));
   db.cards.unshift(card);
   const st=$('cardUploadStatus');
   if(send){
