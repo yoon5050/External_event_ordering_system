@@ -176,7 +176,7 @@
 <!-- ════════ 로그인 화면 ════════ -->
 <div id="loginView" style="display:none; text-align:center; padding:120px 20px;">
   <div class="brand" style="font-size:18px; margin-bottom:6px;">lowlit collective</div>
-  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 50</span></p>
+  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 54</span></p>
   <button class="btn btn-dark" style="padding:13px 28px;" onclick="login()">Google 계정으로 로그인</button>
   <p id="loginErr" style="color:var(--red); font-size:12.5px; margin-top:16px;"></p>
 </div>
@@ -455,6 +455,7 @@
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;align-items:center;">
         <input type="text" id="kakaoTestPhone" placeholder="테스트 받을 번호 (예: 01012345678)" style="max-width:230px;">
         <button class="btn btn-line btn-sm" onclick="testAlim()">💬 알림톡 테스트 발송</button>
+        <button class="btn btn-line btn-sm" onclick="testAlimSchedule()">⏰ 예약 테스트(2분 뒤)</button>
       </div>
       <p style="font-size:11.5px;color:var(--sub);margin-top:8px;line-height:1.7;">솔라피는 <b>승인된 템플릿</b>을 서버에서 채우므로 앱엔 문구를 넣지 않아요. 변수(<code>#{고객명}</code>·<code>#{주문번호}</code>·<code>#{주문제품}</code>·<code>#{주문접수일}</code>·<code>#{택배사}</code>)가 주문 정보로 <b>자동 치환</b>됩니다. 릴레이 URL·채널 ID·발신번호·템플릿 ID가 있어야 발송돼요. (설정 방법은 별도 안내 참고)</p>
     </div>
@@ -552,7 +553,7 @@
       </div>
       <div class="row">
         <div style="flex:1.4;"><label class="f">이메일</label><input type="text" id="regEmail" placeholder="자료 메일 발송에 사용"></div>
-        <div><label class="f">연락처</label><input type="text" id="regPhone"></div>
+        <div><label class="f">연락처</label><input type="text" id="regPhone" oninput="this.value=fmtPhone(this.value)"></div>
       </div>
       <div style="margin-bottom:10px;"><label class="f">상담 내역</label><textarea id="regMemo" style="min-height:70px;" placeholder="상담 내용, 관심 품목, 요청 사항 등"></textarea></div>
       <label class="f">발송 자료 (체크)</label>
@@ -602,8 +603,7 @@
       </div>
 
       <div class="cf"><label>이름 <span class="req">*</span></label><input type="text" id="kName" autocomplete="off"></div>
-      <div class="cf"><label>연락처 <span class="req">*</span></label><input type="tel" id="kPhone" placeholder="010-0000-0000" autocomplete="off"></div>
-      <div class="cf"><label>이메일</label><input type="email" id="kEmail" placeholder="주문 안내 수신용 (선택)" autocomplete="off"></div>
+      <div class="cf"><label>연락처 <span class="req">*</span></label><input type="tel" id="kPhone" placeholder="010-0000-0000" autocomplete="off" oninput="this.value=fmtPhone(this.value)"></div>
       <div class="cf"><label>주소 <span class="req">*</span></label>
         <div style="display:flex; gap:8px;">
           <input type="text" id="kZip" placeholder="우편번호" readonly style="width:110px; background:#f5f5f3;">
@@ -673,7 +673,7 @@
   </div>
   </section>
 
-  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 50</div>
+  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 54</div>
 </div>
 </div>
 
@@ -1352,13 +1352,20 @@ function updateCustSummary(){
     <div style="display:flex;justify-content:space-between;border-top:1.5px solid #111;margin-top:4px;padding-top:6px;font-size:15px;"><span><b>결제금액</b></span><b>${fmt(final)}원</b></div>`;
 }
 function resetCustForm(){
-  ['kName','kPhone','kEmail','kZip','kAddr','kAddr2','kHopeDate','kShipMemo','kEtc','kPayEtc','kStaffMemo','kDiscount'].forEach(i=>$(i).value='');
+  ['kName','kPhone','kZip','kAddr','kAddr2','kHopeDate','kShipMemo','kEtc','kPayEtc','kStaffMemo','kDiscount'].forEach(i=>{ if($(i)) $(i).value=''; });
   giftSig=''; $('kGifts').innerHTML='';
   closePostcode();
   $('kEtcChk').checked=false; $('kConsent').checked=false; $('kNoticeChk').checked=false;
   document.querySelectorAll('input[name="kPay"]').forEach(r=>r.checked=false);
   syncRepSelect(); $('kRep').value=''; $('kShipNotice').value=db.settings.shipNote||DEFAULT_SHIPNOTE;
   renderCustProducts();
+}
+function fmtPhone(v){
+  const d=String(v||'').replace(/[^0-9]/g,'').slice(0,11);
+  if(d.length<4) return d;
+  if(d.length<8) return d.slice(0,3)+'-'+d.slice(3);
+  if(d.length<11) return d.slice(0,3)+'-'+d.slice(3,6)+'-'+d.slice(6);
+  return d.slice(0,3)+'-'+d.slice(3,7)+'-'+d.slice(7);
 }
 let submitting=false;
 async function submitCustOrder(){
@@ -1416,7 +1423,7 @@ async function submitCustOrder(){
     promoDiscount:promo.disc, promoNames:promo.names,
     discount:Math.max(0,+$('kDiscount').value||0),
     shipFee:orderShip,
-    customer:{name,phone,email:$('kEmail').value.trim(),addr},
+    customer:{name,phone,email:'',addr},
     hopeDate:$('kHopeDate').value, shipMemo:$('kShipMemo').value.trim(), pay, ship:'상품준비', consent:true, noticeAgree:true,
     rep, shipNotice:$('kShipNotice').value.trim(),
     staffMemo:$('kStaffMemo').value.trim(), memoBad:'', memoWhy:''
@@ -1465,7 +1472,7 @@ function alimVars(o){
   const prod=(o.items||[]).filter(i=>!i.gift).map(i=>i.name+(i.option?'('+i.option+')':'')+' '+i.qty+'개').join(', ');
   return { '#{고객명}':(o.customer&&o.customer.name)||'', '#{주문번호}':o.no||'', '#{주문제품}':prod, '#{주문접수일}':(o.ts||'').slice(0,10), '#{택배사}':o.courier||(s.couriers&&s.couriers[0])||'' };
 }
-function alimSendDate(days){ const d=new Date(Date.now()+days*86400000); const p=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`; }
+function alimSendDate(days){ return new Date(Date.now()+days*86400000).toISOString(); }
 function alimQuery(o,templateId,phone,senddate){
   const s=db.settings;
   const p={ to:String(phone||'').replace(/[^0-9]/g,''), from:String(s.kakaoSender||'').replace(/[^0-9]/g,''), pfId:s.kakaoSenderKey, templateId:templateId, variables:JSON.stringify(alimVars(o)), senddate:senddate||'', disableSms:(s.kakaoFailover?'false':'true') };
@@ -1491,6 +1498,20 @@ function testAlim(){
   const fake={ customer:{name:'테스트', phone:phone}, no:'TEST-000', ts:today()+'T00:00:00', items:[{name:'테스트상품',option:'',qty:1}], courier:(s.couriers&&s.couriers[0])||'택배사' };
   window.open(alimQuery(fake, s.kakaoTplOrder, phone, ''),'_blank');
   alert('새 탭에서 솔라피 응답(JSON)이 열립니다.\n그 화면을 캡처해서 보내주세요.\n(성공이면 statusCode 2000 계열, 실패면 errorMessage가 보입니다.)');
+}
+function testAlimSchedule(){
+  const s=db.settings; const miss=[];
+  if(!s.kakaoRelayUrl) miss.push('릴레이 URL');
+  if(!s.kakaoSenderKey) miss.push('채널 ID(pfId)');
+  if(!s.kakaoSender) miss.push('발신번호');
+  if(!s.kakaoTplOrder) miss.push('주문완료 템플릿 ID');
+  const phone=(($('kakaoTestPhone')&&$('kakaoTestPhone').value)||'').replace(/[^0-9]/g,'');
+  if(!phone) miss.push('테스트 번호');
+  if(miss.length){ alert('먼저 아래 값을 채우고 저장해 주세요:\n· '+miss.join('\n· ')); return; }
+  const fake={ customer:{name:'테스트', phone:phone}, no:'TEST-000', ts:today()+'T00:00:00', items:[{name:'테스트상품',option:'',qty:1}], courier:(s.couriers&&s.couriers[0])||'택배사' };
+  const when=new Date(Date.now()+2*60000).toISOString();
+  window.open(alimQuery(fake, s.kakaoTplOrder, phone, when),'_blank');
+  alert('2분 뒤 예약을 요청했습니다.\n1) 새 탭의 솔라피 응답을 캡처해 주세요(성공이면 statusCode 2000 계열).\n2) 2분 뒤 카톡이 오면 3일 예약도 정상이에요.\n3) 솔라피 콘솔 → 예약 발송 내역에도 뜨는지 확인하세요.');
 }
 function courierOpts(sel){ return (db.settings.couriers||[]).map(c=>`<option ${c===sel?'selected':''}>${esc(c)}</option>`).join(''); }
 function cycleShip(id){
@@ -1556,29 +1577,41 @@ function renderStock(){
   });
   if(lowOnly) rows=rows.filter(r=>r.low);
   const coll=new Intl.Collator('ko');
-  rows.sort((a,b)=>{
+  const sortFn=(a,b)=>{
     switch(sort){
       case 'remain_asc': return a.rm-b.rm;
-      case 'name': return coll.compare(a.p.name+a.p.option, b.p.name+b.p.option);
+      case 'name': return coll.compare(a.p.option||'', b.p.option||'');
       case 'ordered_desc': return b.oq-a.oq;
       case 'burn_desc': return b.pct-a.pct;
       case 'price_desc': return b.p.price-a.p.price;
-      default: return b.rm-a.rm; // remain_desc
+      default: return b.rm-a.rm;
     }
-  });
+  };
+  const order=[], map={};
+  rows.forEach(r=>{ if(!map[r.p.name]){ map[r.p.name]=[]; order.push(r.p.name); } map[r.p.name].push(r); });
   $('stockEmpty').style.display=rows.length?'none':'';
   if(!rows.length&&ev().products.length) $('stockEmpty').textContent='조건에 맞는 제품이 없습니다.';
   else $('stockEmpty').textContent='등록된 제품이 없습니다.';
-  rows.forEach(({p,oq,rm,pct,low})=>{
-    const rmHtml=rm>=0?`${rm}${low?' ⚠️':''}`:`0 <span class="pill p-red">추가생산 ${-rm}</span>`;
-    tb.insertAdjacentHTML('beforeend',`<tr>
-      <td><span style="display:inline-block;width:18px;height:18px;border-radius:4px;border:1px solid #ccc;background:${p.color||'#e0e0e0'};vertical-align:middle;"></span></td>
-      <td><b>${esc(p.name)}</b></td><td>${esc(p.option)||'-'}</td>
-      <td class="num">${fmt(p.price)}원</td>
-      <td class="num">${p.stock}</td><td class="num">${oq}</td>
-      <td class="num ${low?'stock-warn':''}" style="font-weight:800;white-space:nowrap;">${rmHtml}</td>
-      <td><div class="bar"><i class="${low?'low':''}" style="width:${Math.min(100,pct)}%;"></i></div><span style="font-size:11px;color:var(--sub);">${pct}% 소진</span></td>
+  order.forEach(gName=>{
+    const list=map[gName].slice().sort(sortFn);
+    const gStock=list.reduce((s,r)=>s+r.p.stock,0), gOrd=list.reduce((s,r)=>s+r.oq,0), gRem=gStock-gOrd;
+    tb.insertAdjacentHTML('beforeend',`<tr style="background:#efefec;">
+      <td colspan="4"><b style="font-size:13.5px;">${esc(gName)}</b> <span style="color:var(--sub);font-size:11.5px;">· ${list.length}종</span></td>
+      <td class="num"><b>${gStock}</b></td><td class="num"><b>${gOrd}</b></td>
+      <td class="num" style="font-weight:800;${gRem<0?'color:var(--red);':''}">${gRem<0?('0 · 추가 '+(-gRem)):gRem}</td>
+      <td></td>
     </tr>`);
+    list.forEach(({p,oq,rm,pct,low})=>{
+      const rmHtml=rm>=0?`${rm}${low?' ⚠️':''}`:`0 <span class="pill p-red">추가생산 ${-rm}</span>`;
+      tb.insertAdjacentHTML('beforeend',`<tr>
+        <td><span style="display:inline-block;width:18px;height:18px;border-radius:4px;border:1px solid #ccc;background:${p.color||'#e0e0e0'};vertical-align:middle;"></span></td>
+        <td style="color:#bbb;text-align:center;">└</td><td>${esc(p.option)||'-'}</td>
+        <td class="num">${fmt(p.price)}원</td>
+        <td class="num">${p.stock}</td><td class="num">${oq}</td>
+        <td class="num ${low?'stock-warn':''}" style="font-weight:800;white-space:nowrap;">${rmHtml}</td>
+        <td><div class="bar"><i class="${low?'low':''}" style="width:${Math.min(100,pct)}%;"></i></div><span style="font-size:11px;color:var(--sub);">${pct}% 소진</span></td>
+      </tr>`);
+    });
   });
 }
 
@@ -1852,6 +1885,22 @@ function toggleCardList(){
   const hide=b.style.display!=='none';
   b.style.display=hide?'none':''; tg.textContent=hide?'펼치기 ▼':'접기 ▲';
 }
+function compressCardImg(img){
+  let max=1000;
+  for(let a=0;a<4;a++){
+    let w=img.width,h=img.height;
+    if(w>h){ if(w>max){ h=Math.round(h*max/w); w=max; } } else { if(h>max){ w=Math.round(w*max/h); h=max; } }
+    const cv=document.createElement('canvas'); cv.width=w; cv.height=h; cv.getContext('2d').drawImage(img,0,0,w,h);
+    let q=0.7,d=cv.toDataURL('image/jpeg',q);
+    while(d.length>680000 && q>0.4){ q-=0.1; d=cv.toDataURL('image/jpeg',q); }
+    if(d.length<=730000) return d;
+    max=Math.round(max*0.8);
+  }
+  const s=640/Math.max(img.width,img.height,1);
+  const cv=document.createElement('canvas'); cv.width=Math.round(img.width*s); cv.height=Math.round(img.height*s);
+  cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);
+  return cv.toDataURL('image/jpeg',0.5);
+}
 function uploadCardToForm(input){
   const f=input.files[0]; if(!f) return;
   const status=$('cardUploadStatus'); if(status) status.textContent='사진 처리 중…';
@@ -1859,41 +1908,47 @@ function uploadCardToForm(input){
   reader.onload=e=>{
     const img=new Image();
     img.onload=()=>{
-      const max=1200; let w=img.width,h=img.height;
-      if(w>h){ if(w>max){ h=Math.round(h*max/w); w=max; } } else { if(h>max){ w=Math.round(w*max/h); h=max; } }
-      const cv=document.createElement('canvas'); cv.width=w; cv.height=h; cv.getContext('2d').drawImage(img,0,0,w,h);
-      let q=0.7,d=cv.toDataURL('image/jpeg',q); while(d.length>900000&&q>0.3){ q-=0.1; d=cv.toDataURL('image/jpeg',q); }
-      pendingCardImg=d;
-      if(status) status.textContent='✅ 사진 첨부됨'+(db.settings.geminiKey?' · 정보 자동 인식 중…':'');
-      extractCardToForm(d);
+      try{ pendingCardImg=compressCardImg(img); }
+      catch(err){ if(status) status.textContent='사진 처리 실패: '+(err&&err.message?err.message:err); input.value=''; return; }
+      if(status) status.textContent='✅ 사진 첨부됨'+(db.settings.geminiKey?' · 정보 자동 인식 중…':' · (자동입력하려면 설정에 Gemini 키 입력)');
+      extractCardToForm(pendingCardImg);
       input.value='';
     };
-    img.onerror=()=>{ if(status) status.textContent='이미지를 읽을 수 없습니다.'; input.value=''; };
+    img.onerror=()=>{ if(status) status.textContent='이미지를 읽을 수 없습니다. (아이폰이면 사진 형식을 JPEG로 촬영해 주세요)'; input.value=''; };
     img.src=e.target.result;
   };
+  reader.onerror=()=>{ if(status) status.textContent='파일을 읽을 수 없습니다.'; input.value=''; };
   reader.readAsDataURL(f);
 }
 async function extractCardToForm(dataUrl){
-  const key=db.settings.geminiKey; if(!key) return;
-  const b64=(dataUrl||'').split(',')[1]; if(!b64) return;
+  const key=db.settings.geminiKey;
   const status=$('cardUploadStatus');
-  try{
-    const body={contents:[{parts:[
-      {text:'다음 명함 이미지에서 정보를 추출해 JSON으로만 답하세요. 키: name(이름), company(회사명과 부서), title(직함), email, phone(대표 휴대폰 또는 전화 1개). 값이 없으면 빈 문자열. 코드블록이나 설명 없이 순수 JSON만 출력.'},
-      {inline_data:{mime_type:'image/jpeg', data:b64}}
-    ]}]};
-    const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key='+encodeURIComponent(key),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-    const j=await r.json(); if(j.error) throw new Error(j.error.message||'API 오류');
-    let txt=(j.candidates&&j.candidates[0]&&j.candidates[0].content&&j.candidates[0].content.parts&&j.candidates[0].content.parts[0].text)||'';
-    txt=txt.replace(/```json/gi,'').replace(/```/g,'').trim();
-    const info=JSON.parse(txt);
-    if(info.name&&!$('regName').value) $('regName').value=info.name;
-    if(info.company&&!$('regCompany').value) $('regCompany').value=info.company;
-    if(info.title&&!$('regTitle').value) $('regTitle').value=info.title;
-    if(info.email&&!$('regEmail').value) $('regEmail').value=info.email;
-    if(info.phone&&!$('regPhone').value) $('regPhone').value=info.phone;
-    if(status){ status.textContent='✅ 명함 정보 자동 입력됨 (확인 후 수정 가능)'; }
-  }catch(e){ if(status) status.textContent='사진 첨부됨 · 자동 인식 실패(직접 입력하세요)'; }
+  if(!key){ if(status) status.textContent='✅ 사진 첨부됨 · 자동입력하려면 설정 → 명함 설정에 Gemini 키를 넣어주세요'; return; }
+  const b64=(dataUrl||'').split(',')[1]; if(!b64) return;
+  const body={contents:[{parts:[
+    {text:'다음 명함 이미지에서 정보를 추출해 JSON으로만 답하세요. 키: name(이름), company(회사명과 부서), title(직함), email, phone(대표 휴대폰 또는 전화 1개). 값이 없으면 빈 문자열. 코드블록이나 설명 없이 순수 JSON만 출력.'},
+    {inline_data:{mime_type:'image/jpeg', data:b64}}
+  ]}]};
+  const models=['gemini-2.5-flash','gemini-2.0-flash','gemini-1.5-flash'];
+  let lastErr='';
+  for(let mi=0; mi<models.length; mi++){
+    try{
+      const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+models[mi]+':generateContent?key='+encodeURIComponent(key),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      const j=await r.json();
+      if(j.error){ lastErr=j.error.message||'API 오류'; if(String(lastErr).toLowerCase().indexOf('api key')>=0||String(lastErr).indexOf('API_KEY')>=0){ break; } continue; }
+      let txt=(j.candidates&&j.candidates[0]&&j.candidates[0].content&&j.candidates[0].content.parts&&j.candidates[0].content.parts[0].text)||'';
+      txt=txt.replace(/```json/gi,'').replace(/```/g,'').trim();
+      const info=JSON.parse(txt);
+      if(info.name&&!$('regName').value) $('regName').value=info.name;
+      if(info.company&&!$('regCompany').value) $('regCompany').value=info.company;
+      if(info.title&&!$('regTitle').value) $('regTitle').value=info.title;
+      if(info.email&&!$('regEmail').value) $('regEmail').value=info.email;
+      if(info.phone&&!$('regPhone').value) $('regPhone').value=info.phone;
+      if(status) status.textContent='✅ 명함 정보 자동 입력됨 (확인 후 수정 가능)';
+      return;
+    }catch(e){ lastErr=(e&&e.message)?e.message:String(e); }
+  }
+  if(status) status.textContent='자동 인식 실패: '+lastErr+' — 직접 입력해 주세요';
 }
 function resetLeadForm(){
   ['regName','regCompany','regTitle','regEmail','regPhone','regMemo','mat_etc_text'].forEach(i=>{ if($(i)) $(i).value=''; });
