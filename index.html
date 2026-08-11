@@ -176,7 +176,7 @@
 <!-- ════════ 로그인 화면 ════════ -->
 <div id="loginView" style="display:none; text-align:center; padding:120px 20px;">
   <div class="brand" style="font-size:18px; margin-bottom:6px;">lowlit collective</div>
-  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 66</span></p>
+  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 67</span></p>
   <button class="btn btn-dark" style="padding:13px 28px;" onclick="login()">Google 계정으로 로그인</button>
   <p id="loginErr" style="color:var(--red); font-size:12.5px; margin-top:16px;"></p>
 </div>
@@ -618,16 +618,17 @@
       </h2>
       <div id="cardListBody">
         <div class="toolbar">
-          <span style="font-size:12px;color:var(--sub);font-weight:600;">상태</span>
-          <select id="cardFilter" onchange="renderCards()">
-            <option value="">전체</option><option>신규</option><option>상담중</option><option>견적발송</option><option>성사</option><option>보류</option>
-          </select>
-          <span id="cardStatusSummary" style="font-size:12px;color:var(--sub);"></span>
+          <div id="cardTabs" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
           <div class="spacer"></div>
           <button class="btn btn-line btn-sm" onclick="exportCards()">📤 명함 엑셀</button>
           <button class="btn btn-line btn-sm" onclick="downloadAllCards()">🖼️ 이미지 일괄 다운로드</button>
         </div>
-        <div id="cardGallery" style="display:flex;flex-direction:column;gap:10px;"></div>
+        <div class="scroll-x">
+        <table>
+          <thead><tr><th>상태</th><th>이름</th><th>회사 · 직함</th><th>연락처</th><th>관심품목</th><th>메일</th><th>후속</th><th></th></tr></thead>
+          <tbody id="cardRows"></tbody>
+        </table>
+        </div>
         <div class="empty" id="cardEmpty" style="display:none;">아직 등록된 명함이 없습니다.</div>
       </div>
     </div>
@@ -726,7 +727,7 @@
   </div>
   </section>
 
-  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 66</div>
+  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 67</div>
 </div>
 </div>
 
@@ -2238,72 +2239,96 @@ function uploadCard(input){
 }
 const CARD_STATUS=['신규','상담중','견적발송','성사','보류'];
 function cardStatusTint(s){ return ({'상담중':['#e9effb','#3a6fd8'],'견적발송':['#fcf3e2','#c8871a'],'성사':['#e7f6ec','#1f8a4c'],'보류':['#efefed','#999']})[s]||['#efefed','#555']; }
+let cardTab='';
+function setCardTab(k){ cardTab=k; renderCards(); }
+function setCardStatus(id,val){ const c=db.cards.find(x=>x.id===id); if(!c) return; c.status=val||'신규'; if(fs) fs.collection('cards').doc(id).update({status:c.status}).catch(e=>alert('저장 실패: '+e.message)); renderCards(); }
+function setCardFollow(id,val){ const c=db.cards.find(x=>x.id===id); if(!c) return; c.followUp=val; if(fs) fs.collection('cards').doc(id).update({followUp:val}).catch(e=>alert('저장 실패: '+e.message)); renderCards(); }
 function renderCards(){
   if(!db.events.length||!ev()) return;
-  if(!$('cardGallery')) return;
-  $('cardEvName').textContent='· '+ev().name;
+  if(!$('cardRows')) return;
+  if($('cardEvName')) $('cardEvName').textContent='· '+ev().name;
   syncRepSelect();
   let list=cardsList();
   const cnt={}; CARD_STATUS.forEach(s=>cnt[s]=0);
   list.forEach(c=>{ const s=c.status||'신규'; cnt[s]=(cnt[s]||0)+1; });
-  if($('cardStatusSummary')) $('cardStatusSummary').textContent=CARD_STATUS.map(s=>s+' '+cnt[s]).join(' · ');
   $('cardCount').textContent=list.length?list.length+'명':'';
-  const flt=$('cardFilter')?$('cardFilter').value:'';
-  if(flt) list=list.filter(c=>(c.status||'신규')===flt);
-  const g=$('cardGallery'); g.innerHTML='';
-  $('cardEmpty').style.display=list.length?'none':'';
+  const tabs=[['','전체',list.length]].concat(CARD_STATUS.map(s=>[s,s,cnt[s]]));
+  if($('cardTabs')) $('cardTabs').innerHTML=tabs.map(a=>`<button class="btn btn-sm ${cardTab===a[0]?'btn-dark':'btn-line'}" onclick="setCardTab('${a[0]}')">${a[1]} <span style="opacity:.65;">${a[2]}</span></button>`).join('');
+  if(cardTab) list=list.filter(c=>(c.status||'신규')===cardTab);
+  list=list.slice().sort((x,y)=>(y.ts||'').localeCompare(x.ts||''));
   const today0=today();
+  const tb=$('cardRows'); tb.innerHTML='';
+  $('cardEmpty').style.display=list.length?'none':'';
   list.forEach(c=>{
     const st=c.status||'신규'; const tint=cardStatusTint(st);
     const overdue=c.followUp && c.followUp<=today0 && st!=='성사' && st!=='보류';
     const opts=CARD_STATUS.map(s=>`<option ${s===st?'selected':''}>${s}</option>`).join('');
-    g.insertAdjacentHTML('beforeend',`<div style="display:flex;gap:12px;border:1px solid ${overdue?'var(--red)':'var(--line)'};border-radius:10px;padding:10px;background:#fff;align-items:flex-start;">
-      ${c.img?`<img src="${c.img}" onclick="openCardImage('${c.id}')" title="크게 보기" style="width:132px;height:84px;object-fit:cover;border-radius:6px;cursor:zoom-in;flex-shrink:0;background:#f4f4f2;">`:`<div style="width:132px;height:84px;border-radius:6px;flex-shrink:0;background:#f4f4f2;display:flex;align-items:center;justify-content:center;color:#bbb;font-size:12px;text-align:center;line-height:1.4;">명함<br>없음</div>`}
-      <div style="flex:1;min-width:0;">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">
-          <select id="cf_status_${c.id}" onchange="saveCard('${c.id}')" style="width:auto;font-weight:700;background:${tint[0]};color:${tint[1]};border-color:${tint[0]};">${opts}</select>
-          <span style="font-size:12px;color:var(--sub);">후속</span>
-          <input type="date" id="cf_followUp_${c.id}" value="${c.followUp||''}" onchange="saveCard('${c.id}')" style="width:auto;">
-          ${overdue?'<span class="pill p-red">⏰ 후속 필요</span>':''}
-          <span style="font-size:10.5px;color:var(--sub);margin-left:auto;">${c.ts.slice(0,16).replace('T',' ')}</span>
+    const mail=(c.mail1Sent?'<span class="pill p-green" style="font-size:10px;">1차 ✓</span>':'<span class="pill p-amber" style="font-size:10px;">1차 미</span>')+(c.mail2Sent?' <span class="pill p-blue" style="font-size:10px;">2차 ✓</span>':'');
+    tb.insertAdjacentHTML('beforeend',`<tr${overdue?' style="background:#fff3f3;"':''}>
+      <td><select onchange="setCardStatus('${c.id}',this.value)" style="width:auto;font-weight:700;font-size:12px;background:${tint[0]};color:${tint[1]};border-color:${tint[0]};">${opts}</select></td>
+      <td><b>${esc(c.name)||'<span style="color:var(--sub);">(이름 없음)</span>'}</b></td>
+      <td style="font-size:12px;">${esc(c.company)||'-'}${c.title?'<br><span style="color:var(--sub);">'+esc(c.title)+'</span>':''}</td>
+      <td style="font-size:12px;white-space:nowrap;">${esc(c.phone)||'-'}</td>
+      <td style="font-size:12px;max-width:170px;"><div class="memo-clamp">${esc(c.interest)||'-'}</div></td>
+      <td style="white-space:nowrap;">${mail}</td>
+      <td style="white-space:nowrap;"><input type="date" value="${c.followUp||''}" onchange="setCardFollow('${c.id}',this.value)" style="width:auto;font-size:11px;">${overdue?'<br><span class="pill p-red" style="font-size:10px;">⏰ 후속필요</span>':''}</td>
+      <td style="white-space:nowrap;"><button class="btn btn-line btn-sm" onclick="openLead('${c.id}')">상세</button> <button class="btn btn-red btn-sm" onclick="delCard('${c.id}')">✕</button></td></tr>`);
+  });
+}
+function openLead(id){
+  const c=db.cards.find(x=>x.id===id); if(!c) return;
+  $('dlgTitle').textContent='명함 · '+(c.name||c.company||'상세');
+  $('dlgContent').innerHTML=cardEditHTML(c);
+  dlg.showModal();
+}
+function cardEditHTML(c){
+  const st=c.status||'신규'; const tint=cardStatusTint(st);
+  const opts=CARD_STATUS.map(s=>`<option ${s===st?'selected':''}>${s}</option>`).join('');
+  return `<div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;">
+    ${c.img?`<img src="${c.img}" onclick="openCardImage('${c.id}')" title="크게 보기" style="width:180px;height:114px;object-fit:cover;border-radius:8px;cursor:zoom-in;background:#f4f4f2;">`:`<div style="width:180px;height:114px;border-radius:8px;background:#f4f4f2;display:flex;align-items:center;justify-content:center;color:#bbb;font-size:12px;">명함 없음</div>`}
+    <div style="flex:1;min-width:280px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
+        <select id="cf_status_${c.id}" onchange="saveCard('${c.id}')" style="width:auto;font-weight:700;background:${tint[0]};color:${tint[1]};border-color:${tint[0]};">${opts}</select>
+        <span style="font-size:12px;color:var(--sub);">후속</span>
+        <input type="date" id="cf_followUp_${c.id}" value="${c.followUp||''}" onchange="saveCard('${c.id}')" style="width:auto;">
+        <span style="font-size:11px;color:var(--sub);margin-left:auto;">${c.ts.slice(0,16).replace('T',' ')} · 담당자 ${esc(c.rep)||'-'}</span>
+      </div>
+      <div class="row" style="gap:8px;margin-bottom:6px;">
+        <div style="flex:1;min-width:90px;"><label class="f">이름</label><input type="text" id="cf_name_${c.id}" value="${esc(c.name||'')}"></div>
+        <div style="flex:1.5;min-width:120px;"><label class="f">회사/부서</label><input type="text" id="cf_company_${c.id}" value="${esc(c.company||'')}"></div>
+        <div style="flex:1;min-width:90px;"><label class="f">직함</label><input type="text" id="cf_title_${c.id}" value="${esc(c.title||'')}"></div>
+      </div>
+      <div class="row" style="gap:8px;margin-bottom:6px;">
+        <div style="flex:1.5;min-width:140px;"><label class="f">이메일</label><input type="text" id="cf_email_${c.id}" value="${esc(c.email||'')}"></div>
+        <div style="flex:1;min-width:120px;"><label class="f">연락처</label><input type="text" id="cf_phone_${c.id}" value="${esc(c.phone||'')}"></div>
+      </div>
+      <div style="margin-bottom:6px;"><label class="f">관심 품목</label><input type="text" id="cf_interest_${c.id}" value="${esc(c.interest||'')}" placeholder="예: 위뜨 램프 도매, 캐피블럭 대량"></div>
+      <div><label class="f">상담 메모</label><textarea id="cf_memo_${c.id}" style="min-height:56px;">${esc(c.memo||'')}</textarea></div>
+      <div style="background:#fafaf8;border:1px solid #eee;border-radius:8px;padding:8px 10px;margin-top:8px;">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
+          <span class="pill ${c.mail1Sent?'p-green':'p-amber'}">${c.mail1Sent?('1차 발송 ✅ '+c.mail1Sent):'⚠️ 1차 메일 미발송'}</span>
+          ${c.mail2Sent?`<span class="pill p-blue">2차 발송 ✅ ${c.mail2Sent}</span>`:''}
         </div>
-        <div class="row" style="gap:8px;margin-bottom:6px;">
-          <div style="flex:1;min-width:90px;"><label class="f">이름</label><input type="text" id="cf_name_${c.id}" value="${esc(c.name||'')}"></div>
-          <div style="flex:1.5;min-width:120px;"><label class="f">회사/부서</label><input type="text" id="cf_company_${c.id}" value="${esc(c.company||'')}"></div>
-          <div style="flex:1;min-width:90px;"><label class="f">직함</label><input type="text" id="cf_title_${c.id}" value="${esc(c.title||'')}"></div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;font-size:12.5px;margin-bottom:6px;">
+          <label style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="lc_company_${c.id}"> 회사소개서</label>
+          <label style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="lc_catalog_${c.id}"> 제품카탈로그</label>
+          <label style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="lc_lookbook_${c.id}"> 룩북</label>
+          <label style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="lc_cappie_${c.id}"> 캐피블럭(B2B)</label>
+          <label style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="lc_presskit_${c.id}"> 프레스킷</label>
         </div>
-        <div class="row" style="gap:8px;margin-bottom:6px;">
-          <div style="flex:1.5;min-width:140px;"><label class="f">이메일</label><input type="text" id="cf_email_${c.id}" value="${esc(c.email||'')}"></div>
-          <div style="flex:1;min-width:120px;"><label class="f">연락처</label><input type="text" id="cf_phone_${c.id}" value="${esc(c.phone||'')}"></div>
-        </div>
-        <div style="margin-bottom:6px;"><label class="f">관심 품목</label><input type="text" id="cf_interest_${c.id}" value="${esc(c.interest||'')}" placeholder="예: 위뜨 램프 도매, 캐피블럭 대량"></div>
-        <div><label class="f">상담 메모</label><textarea id="cf_memo_${c.id}" style="min-height:44px;">${esc(c.memo||'')}</textarea></div>
-        <div style="background:#fafaf8;border:1px solid #eee;border-radius:8px;padding:8px 10px;margin-top:8px;">
-          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
-            <span class="pill ${c.mail1Sent?'p-green':'p-amber'}">${c.mail1Sent?('1차 발송 ✅ '+c.mail1Sent):'⚠️ 1차 메일 미발송'}</span>
-            ${c.mail2Sent?`<span class="pill p-blue">2차 발송 ✅ ${c.mail2Sent}</span>`:''}
-            <span style="font-size:11.5px;color:var(--sub);">담당자: ${esc(c.rep)||'-'}</span>
-          </div>
-          <div style="display:flex;gap:10px;flex-wrap:wrap;font-size:12.5px;margin-bottom:6px;">
-            <label style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="lc_company_${c.id}"> 회사소개서</label>
-            <label style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="lc_catalog_${c.id}"> 제품카탈로그</label>
-            <label style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="lc_lookbook_${c.id}"> 룩북</label>
-            <label style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="lc_cappie_${c.id}"> 캐피블럭(B2B)</label>
-            <label style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="lc_presskit_${c.id}"> 프레스킷</label>
-          </div>
-          <div style="display:flex;gap:6px;flex-wrap:wrap;">
-            <button class="btn ${c.mail1Sent?'btn-line':'btn-dark'} btn-sm" onclick="sendLeadFromList('${c.id}',1)">${c.mail1Sent?'1차 재발송':'1차 메일 보내기'}</button>
-            <button class="btn btn-line btn-sm" onclick="sendLeadFromList('${c.id}',2)">2차 컨택 메일</button>
-          </div>
-        </div>
-        <div style="display:flex;gap:6px;margin-top:7px;align-items:center;flex-wrap:wrap;">
-          <button class="btn btn-dark btn-sm" id="cardsave_${c.id}" onclick="saveCard('${c.id}')">저장</button>
-          ${c.img?`<a class="btn btn-line btn-sm" href="${c.img}" download="명함_${esc((c.name||c.ts.slice(0,10)))}.jpg" style="text-decoration:none;">⬇️ 이미지</a>`:``}
-          <button class="btn btn-red btn-sm" onclick="delCard('${c.id}')">삭제</button>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button class="btn ${c.mail1Sent?'btn-line':'btn-dark'} btn-sm" onclick="sendLeadFromList('${c.id}',1)">${c.mail1Sent?'1차 재발송':'1차 메일 보내기'}</button>
+          <button class="btn btn-line btn-sm" onclick="sendLeadFromList('${c.id}',2)">2차 컨택 메일</button>
         </div>
       </div>
-    </div>`);
-  });
+      <div style="display:flex;gap:6px;margin-top:10px;align-items:center;flex-wrap:wrap;">
+        <button class="btn btn-dark btn-sm" id="cardsave_${c.id}" onclick="saveCard('${c.id}')">저장</button>
+        ${c.img?`<a class="btn btn-line btn-sm" href="${c.img}" download="명함_${esc((c.name||c.ts.slice(0,10)))}.jpg" style="text-decoration:none;">⬇️ 이미지</a>`:``}
+        <button class="btn btn-red btn-sm" onclick="delCard('${c.id}')">삭제</button>
+        <button class="btn btn-line btn-sm" style="margin-left:auto;" onclick="dlg.close()">닫기</button>
+      </div>
+    </div>
+  </div>`;
 }
 function cardFileName(c){
   const parts=[c.company,c.name,c.title].map(x=>String(x||'').replace(/[\\/:*?"<>|]/g,' ').trim()).filter(Boolean);
@@ -2338,6 +2363,7 @@ function delCard(id){
   if(!confirm('이 명함을 삭제할까요?')) return;
   db.cards=db.cards.filter(c=>c.id!==id);
   if(fs) fs.collection('cards').doc(id).delete().catch(e=>alert('삭제 실패: '+e.message));
+  if(window.dlg&&dlg.open) dlg.close();
   renderCards();
 }
 function saveCard(id){
