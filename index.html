@@ -176,7 +176,7 @@
 <!-- ════════ 로그인 화면 ════════ -->
 <div id="loginView" style="display:none; text-align:center; padding:120px 20px;">
   <div class="brand" style="font-size:18px; margin-bottom:6px;">lowlit collective</div>
-  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 61</span></p>
+  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 63</span></p>
   <button class="btn btn-dark" style="padding:13px 28px;" onclick="login()">Google 계정으로 로그인</button>
   <p id="loginErr" style="color:var(--red); font-size:12.5px; margin-top:16px;"></p>
 </div>
@@ -237,6 +237,11 @@
   <section id="tab-list" style="display:none;">
     <div class="card">
       <h2>📦 주문 목록 <span class="hint" id="listEvName"></span></h2>
+      <div style="display:flex;gap:6px;margin:2px 0 12px;flex-wrap:wrap;">
+        <button id="otab_all" class="btn btn-dark btn-sm" onclick="setOrderTab('all')">전체 <span id="otc_all">0</span></button>
+        <button id="otab_del" class="btn btn-line btn-sm" onclick="setOrderTab('del')">🚚 배송 <span id="otc_del">0</span></button>
+        <button id="otab_pick" class="btn btn-line btn-sm" onclick="setOrderTab('pick')">🏬 현장수령 <span id="otc_pick">0</span></button>
+      </div>
       <div class="toolbar">
         <input type="text" id="q" placeholder="🔍 이름·연락처·주문번호 검색" oninput="renderOrders()">
         <select id="fPay" onchange="renderOrders()">
@@ -636,8 +641,8 @@
         </select>
       </div>
 
-      <div class="cf"><label>이름 <span class="req">*</span></label><input type="text" id="kName" autocomplete="off"></div>
-      <div class="cf"><label>연락처 <span class="req">*</span></label><input type="tel" id="kPhone" placeholder="010-0000-0000" autocomplete="off" oninput="this.value=fmtPhone(this.value)"></div>
+      <div class="cf" id="kNameCf"><label>이름 <span class="req">*</span></label><input type="text" id="kName" autocomplete="off"></div>
+      <div class="cf" id="kPhoneCf"><label>연락처 <span class="req">*</span></label><input type="tel" id="kPhone" placeholder="010-0000-0000" autocomplete="off" oninput="this.value=fmtPhone(this.value)"></div>
       <div class="cf"><label>수령 방법 <span class="req">*</span></label>
         <div style="display:flex;gap:8px;">
           <label class="opt-row" style="flex:1;cursor:pointer;"><input type="radio" name="kReceipt" value="배송" id="kr1" checked onchange="onReceiptChange()"><span style="font-weight:400;">🚚 배송</span></label>
@@ -655,9 +660,9 @@
         <input type="text" id="kAddr" class="sub-gap" placeholder="주소 (주소 찾기로 입력하거나 직접 입력)" autocomplete="off">
         <input type="text" id="kAddr2" class="sub-gap" placeholder="상세주소 (동·호수 등)" autocomplete="off">
       </div>
-      <div class="cf"><label>희망 배송일</label><input type="date" id="kHopeDate"></div>
-      <div class="cf"><label>배송 메모</label><input type="text" id="kShipMemo" placeholder="택배기사님께 전달할 메시지 (예: 부재 시 문 앞에 놓아주세요)" autocomplete="off"></div>
-      <div class="cf"><label>배송 관련 안내 <span style="font-weight:400;color:var(--sub);font-size:12px;">(주문서에 인쇄 · 기본 안내가 자동 입력되며 이 주문만 수정 가능)</span></label>
+      <div class="cf" id="kHopeCf"><label>희망 배송일</label><input type="date" id="kHopeDate"></div>
+      <div class="cf" id="kShipMemoCf"><label>배송 메모</label><input type="text" id="kShipMemo" placeholder="택배기사님께 전달할 메시지 (예: 부재 시 문 앞에 놓아주세요)" autocomplete="off"></div>
+      <div class="cf" id="kNoticeCf"><label>배송 관련 안내 <span style="font-weight:400;color:var(--sub);font-size:12px;">(주문서에 인쇄 · 기본 안내가 자동 입력되며 이 주문만 수정 가능)</span></label>
         <textarea id="kShipNotice" style="min-height:54px;"></textarea>
       </div>
 
@@ -717,7 +722,7 @@
   </div>
   </section>
 
-  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 61</div>
+  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 63</div>
 </div>
 </div>
 
@@ -1444,7 +1449,7 @@ function updateCustSummary(){
 function onReceiptChange(){
   const r=document.querySelector('input[name="kReceipt"]:checked');
   const pickup=r&&r.value==='현장수령';
-  const ac=$('kAddrCf'); if(ac) ac.style.display=pickup?'none':'';
+  ['kNameCf','kPhoneCf','kAddrCf','kHopeCf','kShipMemoCf','kNoticeCf'].forEach(id=>{ const el=$(id); if(el) el.style.display=pickup?'none':''; });
 }
 function resetCustForm(){
   ['kName','kPhone','kZip','kAddr','kAddr2','kHopeDate','kShipMemo','kEtc','kPayEtc','kStaffMemo','kDiscount'].forEach(i=>{ if($(i)) $(i).value=''; });
@@ -1472,8 +1477,10 @@ async function submitCustOrder(){
   const zip=$('kZip').value.trim();
   const addr=(($('kAddr').value.trim()+' '+$('kAddr2').value.trim()).trim()+(zip?' (우편번호 : '+zip+')':'')).trim();
   const receipt=(document.querySelector('input[name="kReceipt"]:checked')||{}).value||'배송';
-  if(!name||!phone){ alert('이름, 연락처는 필수입니다.'); return; }
-  if(receipt==='배송'&&!$('kAddr').value.trim()){ alert('배송 주문은 주소가 필수입니다.'); return; }
+  if(receipt==='배송'){
+    if(!name||!phone){ alert('이름, 연락처는 필수입니다.'); return; }
+    if(!$('kAddr').value.trim()){ alert('배송 주문은 주소가 필수입니다.'); return; }
+  }
   const rep=$('kRep').value;
   if(!rep){ alert('판매 담당자를 선택해 주세요.'); return; }
   const items=collectItems();
@@ -1539,12 +1546,19 @@ async function submitCustOrder(){
 }
 
 /* ── 주문목록 ── */
+let orderTab='all';
+function setOrderTab(t){ orderTab=t; renderOrders(); }
 function renderOrders(){
   $('listEvName').textContent='· '+ev().name;
   const q=($('q').value||'').toLowerCase(), fp=$('fPay').value, fs=$('fShip').value;
-  const list=evOrders().filter(o=>
+  let list=evOrders().filter(o=>
     (!q||o.no.toLowerCase().includes(q)||o.customer.name.toLowerCase().includes(q)||o.customer.phone.includes(q)) &&
     (!fp||o.pay.startsWith(fp)) && (!fs||o.ship===fs));
+  const dCount=list.filter(o=>(o.receipt||'배송')==='배송').length, pCount=list.filter(o=>o.receipt==='현장수령').length;
+  if($('otc_all')){ $('otc_all').textContent=list.length; $('otc_del').textContent=dCount; $('otc_pick').textContent=pCount; }
+  ['all','del','pick'].forEach(k=>{ const b=$('otab_'+k); if(b) b.className='btn btn-sm '+(orderTab===k?'btn-dark':'btn-line'); });
+  if(orderTab==='del') list=list.filter(o=>(o.receipt||'배송')==='배송');
+  else if(orderTab==='pick') list=list.filter(o=>o.receipt==='현장수령');
   const tb=$('orderRows'); tb.innerHTML='';
   $('orderEmpty').style.display=list.length?'none':'';
   list.forEach(o=>{
@@ -1552,9 +1566,9 @@ function renderOrders(){
     const shipCls=o.ship==='발송완료'?'p-blue':'p-gray';
     const memo=[o.staffMemo&&('📌 '+o.staffMemo), o.memoBad&&('😕 '+o.memoBad), o.memoWhy&&('💡 '+o.memoWhy)].filter(Boolean).join('\n');
     tb.insertAdjacentHTML('beforeend',`<tr style="${o.hopeDate?'background:#fff3df;':''}border-left:5px solid ${o.receipt==='현장수령'?'#2e9e6b':'#3b7fd4'};">
-      <td><b>${o.no}</b><br><span class="pill ${o.receipt==='현장수령'?'p-green':'p-blue'}" style="margin-top:3px;display:inline-block;white-space:nowrap;">${o.receipt==='현장수령'?'🏬 현장수령':'🚚 배송'}</span>${o.hopeDate?'<br><span class="pill p-amber" style="margin-top:3px;display:inline-block;white-space:nowrap;">🗓️ 희망 '+o.hopeDate.slice(5)+'</span>':''}${o.giftShip?'<br><span class="pill" style="background:#efe3ff;color:#6b3fa0;margin-top:3px;display:inline-block;white-space:nowrap;font-weight:700;">🎁📦 증정품 택배</span>':''}</td>
+      <td><b>${o.no}</b>${o.giftShip?'<br><span class="pill" style="background:#efe3ff;color:#6b3fa0;margin-top:2px;display:inline-block;white-space:nowrap;font-size:10px;padding:2px 6px;">🎁📦 택배</span>':''}</td>
       <td style="white-space:nowrap;">${o.ts.slice(5,10)} ${o.ts.slice(11,16)}</td>
-      <td><b>${esc(o.customer.name)}</b><br><span style="color:var(--sub);font-size:11.5px;white-space:nowrap;">${esc(o.customer.phone)}</span>${o.rep?'<br><span style="color:var(--sub);font-size:11px;white-space:nowrap;">🧑‍💼 '+esc(o.rep)+'</span>':''}</td>
+      <td><b>${esc(o.customer.name)||'🏬 현장수령'}</b>${o.customer.phone?'<br><span style="color:var(--sub);font-size:11.5px;white-space:nowrap;">'+esc(o.customer.phone)+'</span>':''}${o.rep?'<br><span style="color:var(--sub);font-size:11px;white-space:nowrap;">🧑‍💼 '+esc(o.rep)+'</span>':''}</td>
       <td style="max-width:230px;">${items}</td>
       <td class="num"><b>${fmt(paid(o))}원</b>${o.discount?`<br><span style="font-size:11px;color:var(--red);">할인 -${fmt(o.discount)}</span>`:''}</td>
       <td style="white-space:nowrap;"><span class="pill p-green">${esc(o.pay)}</span></td>
