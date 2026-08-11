@@ -176,7 +176,7 @@
 <!-- ════════ 로그인 화면 ════════ -->
 <div id="loginView" style="display:none; text-align:center; padding:120px 20px;">
   <div class="brand" style="font-size:18px; margin-bottom:6px;">lowlit collective</div>
-  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 56</span></p>
+  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 58</span></p>
   <button class="btn btn-dark" style="padding:13px 28px;" onclick="login()">Google 계정으로 로그인</button>
   <p id="loginErr" style="color:var(--red); font-size:12.5px; margin-top:16px;"></p>
 </div>
@@ -543,7 +543,6 @@
         <button class="btn btn-dark btn-sm" onclick="document.getElementById('cardFile').click()">📷 명함 촬영/사진 첨부</button>
         <span id="cardUploadStatus" style="font-size:12px;color:var(--sub);"></span>
       </div>
-      <div class="row" style="margin-bottom:8px;"><div><label class="f">이 전시 명함 저장 폴더 <span style="font-weight:400;color:var(--sub);">(드라이브 폴더 링크/ID · 비우면 전시 이름 폴더 자동)</span></label><input type="text" id="cardFolderId" placeholder="https://drive.google.com/drive/folders/... 또는 폴더 ID" onchange="if(ev()){ev().cardFolder=this.value.trim(); save();}"></div></div>
       <div class="row">
         <div style="max-width:220px;"><label class="f">담당자(등록자)</label><select id="regRep"><option value="">담당자 선택</option></select></div>
       </div>
@@ -584,6 +583,7 @@
           <span id="cardStatusSummary" style="font-size:12px;color:var(--sub);"></span>
           <div class="spacer"></div>
           <button class="btn btn-line btn-sm" onclick="exportCards()">📤 명함 엑셀</button>
+          <button class="btn btn-line btn-sm" onclick="downloadAllCards()">🖼️ 이미지 일괄 다운로드</button>
         </div>
         <div id="cardGallery" style="display:flex;flex-direction:column;gap:10px;"></div>
         <div class="empty" id="cardEmpty" style="display:none;">아직 등록된 명함이 없습니다.</div>
@@ -674,7 +674,7 @@
   </div>
   </section>
 
-  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 56</div>
+  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 58</div>
 </div>
 </div>
 
@@ -887,7 +887,7 @@ function saveSettings(){
 
 /* ── 전시 ── */
 function renderEvSelect(){
-  $('evSelect').innerHTML=db.events.map(e=>`<option value="${e.id}" ${e.id===db.currentEventId?'selected':''}>${esc(e.name)}</option>`).join('');
+  $('evSelect').innerHTML=db.events.map(e=>`<option value="${e.id}" ${e.id===db.currentEventId?'selected':''}>${esc(e.name)}${e.locked?' 🔒':''}</option>`).join('');
   const copyOpts='<option value="">선택 안 함</option>'+db.events.filter(e=>e.id!==db.currentEventId).map(e=>`<option value="${e.id}">${esc(e.name)}</option>`).join('');
   $('copyFrom').innerHTML=db.events.filter(e=>e.id!==db.currentEventId).map(e=>`<option value="${e.id}">${esc(e.name)}</option>`).join('')||'<option value="">다른 전시 없음</option>';
   $('newEvCopy').innerHTML=copyOpts;
@@ -908,6 +908,11 @@ function createNewEvent(){
     .catch(err=>alert('전시 저장 실패: '+err.message+'\n\nFirestore 보안 규칙을 확인해 주세요.'));
   evDlg.close(); renderAll();
  }catch(err){ alert('전시 만들기 오류: '+err.message); }
+}
+function toggleEventLock(id){
+  const e=db.events.find(x=>x.id===id); if(!e) return;
+  e.locked=!e.locked; save(); renderEvRows(); renderAll();
+  alert(e.locked?('『'+e.name+'』 전시를 마감했습니다.\n이 전시에는 신규 주문·명함 등록이 차단됩니다.'):('『'+e.name+'』 전시 등록을 다시 열었습니다.'));
 }
 function delEvent(id){
   if(db.events.length<=1){ alert('전시는 최소 1개가 필요합니다.'); return; }
@@ -1371,6 +1376,7 @@ function fmtPhone(v){
 let submitting=false;
 async function submitCustOrder(){
   if(submitting) return;
+  if(ev()&&ev().locked){ alert('마감된 지난 전시입니다. 신규 주문을 받을 수 없습니다.'); return; }
   const name=$('kName').value.trim(), phone=$('kPhone').value.trim();
   const zip=$('kZip').value.trim();
   const addr=(($('kAddr').value.trim()+' '+$('kAddr2').value.trim()).trim()+(zip?' (우편번호 : '+zip+')':'')).trim();
@@ -1452,8 +1458,8 @@ function renderOrders(){
     const items=o.items.map(i=>`${esc(i.name)}${i.option?'('+esc(i.option)+')':''}${i.gift?'🎁':''}×${i.qty}`).join(', ')+(o.etc?` / 기타: ${esc(o.etc)}`:'');
     const shipCls=o.ship==='발송완료'?'p-blue':'p-gray';
     const memo=[o.staffMemo&&('📌 '+o.staffMemo), o.memoBad&&('😕 '+o.memoBad), o.memoWhy&&('💡 '+o.memoWhy)].filter(Boolean).join('\n');
-    tb.insertAdjacentHTML('beforeend',`<tr>
-      <td><b>${o.no}</b></td>
+    tb.insertAdjacentHTML('beforeend',`<tr style="${o.hopeDate?'background:#fff3df;':''}">
+      <td><b>${o.no}</b>${o.hopeDate?'<br><span class="pill p-amber" style="margin-top:3px;display:inline-block;white-space:nowrap;">🗓️ 희망 '+o.hopeDate.slice(5)+'</span>':''}</td>
       <td style="white-space:nowrap;">${o.ts.slice(5,10)} ${o.ts.slice(11,16)}</td>
       <td><b>${esc(o.customer.name)}</b><br><span style="color:var(--sub);font-size:11.5px;white-space:nowrap;">${esc(o.customer.phone)}</span>${o.rep?'<br><span style="color:var(--sub);font-size:11px;white-space:nowrap;">🧑‍💼 '+esc(o.rep)+'</span>':''}</td>
       <td style="max-width:230px;">${items}</td>
@@ -1621,11 +1627,12 @@ function renderEvRows(){
   const tb=$('evRows'); tb.innerHTML='';
   db.events.forEach(e=>{
     tb.insertAdjacentHTML('beforeend',`<tr>
-      <td><b>${esc(e.name)}</b>${e.id===db.currentEventId?' <span class="pill p-blue">현재</span>':''}</td>
+      <td><b>${esc(e.name)}</b>${e.id===db.currentEventId?' <span class="pill p-blue">현재</span>':''}${e.locked?' <span class="pill p-gray">🔒 마감</span>':''}</td>
       <td class="num">${evOrders(e.id).length}건</td>
       <td class="num">${e.products.length}개</td>
       <td style="white-space:nowrap;">
         <button class="btn btn-line btn-sm" onclick="renameEvent('${e.id}')">이름변경</button>
+        <button class="btn btn-line btn-sm" onclick="toggleEventLock('${e.id}')">${e.locked?'🔓 등록 재개':'🔒 신규 등록 마감'}</button>
         <button class="btn btn-red btn-sm" onclick="delEvent('${e.id}')">삭제</button>
       </td></tr>`);
   });
@@ -1959,6 +1966,7 @@ function resetLeadForm(){
   pendingCardImg=''; cardImgDriveDone='';
 }
 function registerLead(send){
+  if(ev()&&ev().locked){ alert('마감된 지난 전시입니다. 신규 명함을 등록할 수 없습니다.'); return; }
   const gv=id=>{ const el=$(id); return el?el.value.trim():''; };
   const name=gv('regName'), company=gv('regCompany'), title=gv('regTitle'), email=gv('regEmail'), phone=gv('regPhone'), memo=gv('regMemo');
   const rep=$('regRep')?$('regRep').value:'';
@@ -2064,6 +2072,7 @@ function uploadToDrive(card){
 }
 function uploadCard(input){
   const f=input.files[0]; if(!f) return;
+  if(ev()&&ev().locked){ alert('마감된 지난 전시입니다. 신규 명함을 등록할 수 없습니다.'); input.value=''; return; }
   if(!fs){ alert('서버 연결을 확인해 주세요.'); input.value=''; return; }
   const status=$('cardUploadStatus'); status.textContent='업로드 중...';
   const reader=new FileReader();
@@ -2095,7 +2104,6 @@ function renderCards(){
   if(!$('cardGallery')) return;
   $('cardEvName').textContent='· '+ev().name;
   syncRepSelect();
-  if($('cardFolderId')) $('cardFolderId').value=(ev().cardFolder||'');
   let list=cardsList();
   const cnt={}; CARD_STATUS.forEach(s=>cnt[s]=0);
   list.forEach(c=>{ const s=c.status||'신규'; cnt[s]=(cnt[s]||0)+1; });
@@ -2157,6 +2165,25 @@ function renderCards(){
       </div>
     </div>`);
   });
+}
+function cardFileName(c){
+  const parts=[c.company,c.name,c.title].map(x=>String(x||'').replace(/[\\/:*?"<>|]/g,' ').trim()).filter(Boolean);
+  return (parts.join('_')||('명함_'+(c.ts||'').slice(0,10)))+'.jpg';
+}
+function downloadAllCards(){
+  const list=cardsList().filter(c=>c.img);
+  if(!list.length){ alert('다운로드할 명함 이미지가 없습니다.'); return; }
+  if(!confirm(list.length+'개의 명함 이미지를 다운로드합니다.\n브라우저가 "여러 파일 다운로드 허용"을 물으면 허용을 눌러주세요.\n(파일명: 회사_이름_직함.jpg)')) return;
+  const used={}; let i=0;
+  (function next(){
+    if(i>=list.length) return;
+    const c=list[i++];
+    let fn=cardFileName(c);
+    if(used[fn]){ used[fn]++; fn=fn.replace(/\.jpg$/,'_'+used[fn]+'.jpg'); } else used[fn]=1;
+    const a=document.createElement('a'); a.href=c.img; a.download=fn;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(next,400);
+  })();
 }
 function exportCards(){
   const list=cardsList();
