@@ -176,7 +176,7 @@
 <!-- ════════ 로그인 화면 ════════ -->
 <div id="loginView" style="display:none; text-align:center; padding:120px 20px;">
   <div class="brand" style="font-size:18px; margin-bottom:6px;">lowlit collective</div>
-  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 69</span></p>
+  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 70</span></p>
   <button class="btn btn-dark" style="padding:13px 28px;" onclick="login()">Google 계정으로 로그인</button>
   <p id="loginErr" style="color:var(--red); font-size:12.5px; margin-top:16px;"></p>
 </div>
@@ -619,13 +619,14 @@
       <div id="cardListBody">
         <div class="toolbar">
           <div id="cardTabs" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+          <select id="cardRepFilter" onchange="renderCards()" style="font-size:12px;width:auto;"><option value="">담당자 전체</option></select>
           <div class="spacer"></div>
           <button class="btn btn-line btn-sm" onclick="exportCards()">📤 명함 엑셀</button>
           <button class="btn btn-line btn-sm" onclick="downloadAllCards()">🖼️ 이미지 일괄 다운로드</button>
         </div>
         <div class="scroll-x">
         <table id="cardTbl">
-          <thead><tr><th>상태</th><th>이름</th><th>회사 · 직함</th><th>연락처</th><th>메모</th><th>메일</th><th></th></tr></thead>
+          <thead><tr><th>상태</th><th>방문일</th><th>담당자</th><th>이름</th><th>회사 · 직함</th><th>연락처</th><th>메모</th><th>메일</th><th></th></tr></thead>
           <tbody id="cardRows"></tbody>
         </table>
         </div>
@@ -728,7 +729,7 @@
   </div>
   </section>
 
-  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 69</div>
+  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 70</div>
 </div>
 </div>
 
@@ -2255,7 +2256,11 @@ function renderCards(){
   $('cardCount').textContent=list.length?list.length+'명':'';
   const tabs=[['','전체',list.length]].concat(CARD_STATUS.map(s=>[s,s,cnt[s]]));
   if($('cardTabs')) $('cardTabs').innerHTML=tabs.map(a=>`<button class="btn btn-sm ${cardTab===a[0]?'btn-dark':'btn-line'}" onclick="setCardTab('${a[0]}')">${a[1]} <span style="opacity:.65;">${a[2]}</span></button>`).join('');
+  const reps=db.settings.reps||[];
+  if($('cardRepFilter')){ const cur=$('cardRepFilter').value; $('cardRepFilter').innerHTML='<option value="">담당자 전체</option>'+reps.map(r=>`<option ${cur===r?'selected':''}>${esc(r)}</option>`).join(''); }
+  const repF=$('cardRepFilter')?$('cardRepFilter').value:'';
   if(cardTab) list=list.filter(c=>(c.status||'신규')===cardTab);
+  if(repF) list=list.filter(c=>(c.rep||'')===repF);
   list=list.slice().sort((x,y)=>(y.ts||'').localeCompare(x.ts||''));
   const today0=today();
   const tb=$('cardRows'); tb.innerHTML='';
@@ -2267,6 +2272,8 @@ function renderCards(){
     const mail=(c.mail1Sent?'<span class="pill p-green" style="font-size:10px;">1차 ✓</span>':'<span class="pill p-amber" style="font-size:10px;">1차 미</span>')+(c.mail2Sent?' <span class="pill p-blue" style="font-size:10px;">2차 ✓</span>':'');
     tb.insertAdjacentHTML('beforeend',`<tr${overdue?' style="background:#fff3f3;"':''}>
       <td><select onchange="setCardStatus('${c.id}',this.value)" style="width:auto;font-weight:700;font-size:12px;background:${tint[0]};color:${tint[1]};border-color:${tint[0]};">${opts}</select></td>
+      <td style="white-space:nowrap;font-size:12px;">${c.ts?c.ts.slice(5,10).replace('-','/'):'-'}</td>
+      <td style="white-space:nowrap;font-size:12px;">${esc(c.rep)||'-'}</td>
       <td style="white-space:nowrap;"><b>${esc(c.name)||'<span style="color:var(--sub);">(이름 없음)</span>'}</b>${overdue?' <span class="pill p-red" style="font-size:10px;">⏰</span>':''}</td>
       <td style="font-size:12px;">${esc(c.company)||'-'}${c.title?'<br><span style="color:var(--sub);">'+esc(c.title)+'</span>':''}</td>
       <td style="font-size:12px;white-space:nowrap;">${esc(c.phone)||'-'}</td>
