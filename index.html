@@ -176,7 +176,7 @@
 <!-- ════════ 로그인 화면 ════════ -->
 <div id="loginView" style="display:none; text-align:center; padding:120px 20px;">
   <div class="brand" style="font-size:18px; margin-bottom:6px;">lowlit collective</div>
-  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 87</span></p>
+  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 88</span></p>
   <button class="btn btn-dark" style="padding:13px 28px;" onclick="login()">Google 계정으로 로그인</button>
   <p id="loginErr" style="color:var(--red); font-size:12.5px; margin-top:16px;"></p>
 </div>
@@ -243,14 +243,6 @@
           <button id="otab_del" class="btn btn-line btn-sm" onclick="setOrderTab('del')">🚚 배송 <span id="otc_del">0</span></button>
           <button id="otab_pick" class="btn btn-line btn-sm" onclick="setOrderTab('pick')">🏬 현장수령 <span id="otc_pick">0</span></button>
           <button id="otab_unship" class="btn btn-line btn-sm" onclick="setOrderTab('unship')">📦 미발송 <span id="otc_unship">0</span></button>
-          <input type="text" id="q" placeholder="🔍 이름·연락처·주문번호" oninput="renderOrders()" style="width:190px;margin-left:6px;">
-          <select id="fPay" onchange="renderOrders()" style="width:auto;">
-            <option value="">결제: 전체</option><option>카드</option><option>현금</option><option>입금 대기</option><option>기타</option>
-          </select>
-          <select id="fShip" onchange="renderOrders()" style="width:auto;">
-            <option value="">상태: 전체</option><option>상품준비</option><option>발송완료</option>
-          </select>
-          <span id="selCount" style="font-size:12px;color:var(--blue);font-weight:700;"></span>
         </div>
         <div class="spacer"></div>
         <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end;" title="체크한 주문이 있으면 그 건만, 없으면 현재 목록 기준으로 출력">
@@ -268,11 +260,22 @@
           </div>
         </div>
       </div>
+      <div class="toolbar" style="margin-top:0;">
+        <input type="text" id="q" placeholder="🔍 이름·연락처·주문번호 검색" oninput="renderOrders()" style="max-width:280px;">
+        <select id="fPay" onchange="renderOrders()" style="width:auto;">
+          <option value="">결제: 전체</option><option>카드</option><option>현금</option><option>입금 대기</option><option>기타</option>
+        </select>
+        <select id="fShip" onchange="renderOrders()" style="width:auto;">
+          <option value="">상태: 전체</option><option>상품준비</option><option>발송완료</option>
+        </select>
+        <div class="spacer"></div>
+        <span id="selCount" style="font-size:12px;color:var(--blue);font-weight:700;"></span>
+      </div>
       <div class="scroll-x">
       <table id="orderTbl">
-        <colgroup><col style="width:30px"><col style="width:32px"><col style="width:12%"><col style="width:8%"><col style="width:11%"><col style="width:16%"><col style="width:9%"><col style="width:6.5%"><col style="width:9.5%"><col><col style="width:56px"></colgroup>
+        <colgroup><col style="width:30px"><col style="width:32px"><col style="width:17%"><col style="width:8%"><col style="width:11%"><col style="width:15%"><col style="width:9%"><col style="width:6.5%"><col style="width:7%"><col><col style="width:56px"></colgroup>
         <thead><tr>
-          <th><input type="checkbox" title="전체 선택" onchange="toggleSelAll(this.checked)" style="width:15px;height:15px;"></th><th></th><th>주문번호</th><th>일시</th><th>구매자</th><th>품목</th><th style="text-align:center;">금액</th><th style="text-align:center;">결제</th><th>상태</th><th>메모</th><th></th>
+          <th><input type="checkbox" title="전체 선택" onchange="toggleSelAll(this.checked)" style="width:15px;height:15px;"></th><th></th><th>주문번호</th><th>일시</th><th>구매자</th><th>품목</th><th style="text-align:center;">금액</th><th style="text-align:center;">결제</th><th style="text-align:center;">라벨</th><th>메모</th><th></th>
         </tr></thead>
         <tbody id="orderRows"></tbody>
       </table>
@@ -780,7 +783,7 @@
   </div>
   </section>
 
-  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 87</div>
+  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 88</div>
 </div>
 </div>
 
@@ -1642,6 +1645,7 @@ function toggleSel(id,chk){ if(chk) selOrders.add(id); else selOrders.delete(id)
 function toggleSelAll(chk){ document.querySelectorAll('#orderRows .omChk').forEach(c=>{ c.checked=chk; if(chk) selOrders.add(c.dataset.id); else selOrders.delete(c.dataset.id); }); updateSelCount(); }
 function updateSelCount(){ const el=$('selCount'); if(el) el.textContent=selOrders.size?('✔ 선택 '+selOrders.size+'건'):''; }
 function _selOrders(){ return db.orders.filter(o=>selOrders.has(o.id)&&o.eventId===db.currentEventId).sort((a,b)=>(a.ts||'').localeCompare(b.ts||'')); }
+function setLabelCount(id,val){ const o=db.orders.find(x=>x.id===id); if(!o) return; o.labelCount=Math.max(1,+val||1); saveOrderDoc(o); }
 function toggleShipPanel(id){ if(openShip.has(id)) openShip.delete(id); else openShip.add(id); renderOrders(); }
 function saveShipPanel(id){
   const o=db.orders.find(x=>x.id===id); if(!o) return;
@@ -1666,7 +1670,6 @@ function shipPanelHTML(o){
       <div style="flex:0 0 150px;"><label class="f">택배사</label><select id="sp_courier_${o.id}" onchange="saveShipPanel('${o.id}')">${courierOpts(o.courier)}</select></div>
       <div style="flex:1;min-width:170px;"><label class="f">송장번호</label><input type="text" id="sp_track_${o.id}" value="${esc(o.tracking||'')}" placeholder="추후 등록이면 비워두세요" onchange="saveShipPanel('${o.id}')"></div>
       <div style="flex:0 0 150px;"><label class="f">발송일</label><input type="date" id="sp_date_${o.id}" value="${o.shipDate||''}" onchange="saveShipPanel('${o.id}')"></div>
-      <div style="flex:0 0 84px;"><label class="f">라벨 (장)</label><input type="number" min="1" id="sp_label_${o.id}" value="${o.labelCount||1}" onchange="saveShipPanel('${o.id}')"></div>
       <div style="flex:0 0 auto;">${done?`<button class="btn btn-line btn-sm" onclick="cycleShip('${o.id}')">↩ 상품준비로</button>`:`<button class="btn btn-dark btn-sm" onclick="cycleShip('${o.id}')">🚚 발송완료로 전환</button>`}</div>
     </div>
     <div style="font-size:11.5px;color:var(--sub);margin-top:6px;">${esc(o.customer.addr||'')}${o.customer.phone?' · '+esc(o.customer.phone):''} · 결제 ${fmt(paid(o))}원${o.giftShip?' · <b style="color:#6b3fa0;">🎁 증정품 동봉</b>':''}</div>
@@ -1692,19 +1695,18 @@ function renderOrders(){
     const memo=[cNote&&cNote!==dfltNote&&('🚚 '+cNote), o.shipMemo&&('🚪 '+o.shipMemo), o.staffMemo&&('📌 '+o.staffMemo), o.memoBad&&('😕 '+o.memoBad), o.memoWhy&&('💡 '+o.memoWhy)].filter(Boolean).join('\n');
     const pickup=o.receipt==='현장수령'; const shipped=o.ship==='발송완료';
     const done=shipped||pickup; const open=openShip.has(o.id);
-    const statusCell=pickup?`<span class="pill p-green">🏬 현장수령 완료</span>`
-      :`<span class="pill ${shipped?'p-blue':'p-gray'}" style="cursor:pointer;" onclick="toggleShipPanel('${o.id}')" title="박스·송장 정보 열기">${o.ship}</span>`;
-    const noParts=String(o.no).split('-'); const noHtml=noParts.length>=5?`${esc(noParts[0]+'-'+noParts[1])}<br><span style="font-size:10.5px;color:var(--sub);font-weight:500;">${esc(noParts.slice(2).join('-'))}</span>`:esc(o.no);
+    const labelCell=pickup?`<span style="color:var(--sub);">—</span>`
+      :`<input type="number" min="1" value="${o.labelCount||1}" style="width:50px;text-align:center;padding:3px 4px;" onchange="setLabelCount('${o.id}',this.value)" title="박스 라벨 장수 (박스 수)"> <span style="font-size:11px;color:var(--sub);">장</span>`;
     tb.insertAdjacentHTML('beforeend',`<tr style="${done?'background:#f3f3f1;color:#9a9a9a;opacity:.6;':(o.hopeDate?'background:#fff3df;':'')}">
       <td><input type="checkbox" class="omChk" data-id="${o.id}" ${selOrders.has(o.id)?'checked':''} onchange="toggleSel('${o.id}',this.checked)" style="width:15px;height:15px;"></td>
       <td>${pickup?'':`<button class="btn btn-line btn-sm" style="padding:2px 7px;" onclick="toggleShipPanel('${o.id}')" title="박스·송장 정보">${open?'▴':'▾'}</button>`}</td>
-      <td><b>${noHtml}</b>${o.hopeDate?'<br><span class="pill p-amber" style="margin-top:3px;display:inline-block;white-space:nowrap;">🗓️ 희망 '+o.hopeDate.slice(5)+'</span>':''}${o.giftShip?'<br><span class="pill" style="background:#efe3ff;color:#6b3fa0;margin-top:2px;display:inline-block;white-space:nowrap;font-size:10px;padding:2px 6px;">🎁📦 택배</span>':''}</td>
+      <td><b style="font-size:11.5px;">${esc(o.no)}</b>${shipped?'<br><span class="pill p-blue" style="font-size:10px;margin-top:2px;display:inline-block;">발송완료</span>':''}${o.hopeDate?'<br><span class="pill p-amber" style="margin-top:3px;display:inline-block;white-space:nowrap;">🗓️ 희망 '+o.hopeDate.slice(5)+'</span>':''}${o.giftShip?'<br><span class="pill" style="background:#efe3ff;color:#6b3fa0;margin-top:2px;display:inline-block;white-space:nowrap;font-size:10px;padding:2px 6px;">🎁📦 택배</span>':''}</td>
       <td style="white-space:nowrap;">${o.ts.slice(5,10)} ${o.ts.slice(11,16)}</td>
       <td><b>${esc(o.customer.name)||'🏬 현장수령'}</b>${o.customer.phone?'<br><span style="color:var(--sub);font-size:11.5px;white-space:nowrap;">'+esc(o.customer.phone)+'</span>':''}${o.rep?'<br><span style="color:var(--sub);font-size:11px;white-space:nowrap;">🧑‍💼 '+esc(o.rep)+'</span>':''}</td>
       <td style="line-height:1.5;">${items}</td>
       <td style="text-align:center;white-space:nowrap;"><b>${fmt(paid(o))}원</b>${o.discount?`<br><span style="font-size:11px;color:var(--red);">할인 -${fmt(o.discount)}</span>`:''}</td>
       <td style="white-space:nowrap;text-align:center;"><span class="pill p-green">${esc(o.pay)}</span></td>
-      <td style="white-space:nowrap;">${statusCell}</td>
+      <td style="white-space:nowrap;text-align:center;">${labelCell}</td>
       <td class="memo-cell" title="${esc(memo)}"><div class="memo-clamp">${esc(memo)||'-'}</div></td>
       <td style="white-space:nowrap;"><button class="btn btn-line btn-sm" onclick="openDetail('${o.id}')">상세</button></td></tr>`);
     if(open&&!pickup) tb.insertAdjacentHTML('beforeend',shipPanelHTML(o));
