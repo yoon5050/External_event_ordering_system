@@ -176,7 +176,7 @@
 <!-- ════════ 로그인 화면 ════════ -->
 <div id="loginView" style="display:none; text-align:center; padding:120px 20px;">
   <div class="brand" style="font-size:18px; margin-bottom:6px;">lowlit collective</div>
-  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 77</span></p>
+  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 79</span></p>
   <button class="btn btn-dark" style="padding:13px 28px;" onclick="login()">Google 계정으로 로그인</button>
   <p id="loginErr" style="color:var(--red); font-size:12.5px; margin-top:16px;"></p>
 </div>
@@ -432,10 +432,11 @@
       </div>
       <div style="margin-top:16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
         <b style="font-size:13.5px;">📊 담당자별 판매 <span class="hint" id="repSalesEv"></span></b>
+        <button class="btn btn-line btn-sm" id="repSalesToggle" onclick="toggleRepSales()">펼치기 ▼</button>
         <div class="spacer"></div>
         <button class="btn btn-line btn-sm" onclick="exportRepSales()">📤 담당자별 판매 엑셀</button>
       </div>
-      <div class="scroll-x" style="margin-top:8px;">
+      <div class="scroll-x" id="repSalesBody" style="margin-top:8px;display:none;">
       <table>
         <thead><tr><th>담당자</th><th class="num">주문건수</th><th class="num">판매액</th></tr></thead>
         <tbody id="repSalesRows"></tbody>
@@ -582,7 +583,7 @@
       </p>
     </div>
 
-    <div class="grid2">
+    <div class="grid2" style="grid-template-columns:minmax(0,2.2fr) minmax(0,1fr);">
       <div class="card">
         <h2>🎪 전시 관리</h2>
         <div class="scroll-x"><table>
@@ -766,7 +767,7 @@
   </div>
   </section>
 
-  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 77</div>
+  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 79</div>
 </div>
 </div>
 
@@ -1809,7 +1810,7 @@ function renderEvRows(){
   const tb=$('evRows'); tb.innerHTML='';
   db.events.forEach(e=>{
     tb.insertAdjacentHTML('beforeend',`<tr>
-      <td><b>${esc(e.name)}</b>${e.id===db.currentEventId?' <span class="pill p-blue">현재</span>':''}${e.locked?' <span class="pill p-gray">🔒 마감</span>':''}</td>
+      <td style="white-space:nowrap;"><b>${esc(e.name)}</b>${e.id===db.currentEventId?' <span class="pill p-blue">현재</span>':''}${e.locked?' <span class="pill p-gray">🔒 마감</span>':''}</td>
       <td class="num">${evOrders(e.id).length}건</td>
       <td class="num">${e.products.length}개</td>
       <td style="white-space:nowrap;">
@@ -2668,6 +2669,7 @@ function renderReps(){
 }
 /* ── 담당자별 판매 (현재 전시) ── */
 function repSales(){ const m={}; evOrders().forEach(o=>{ const r=(o.rep||'').trim()||'(미지정)'; if(!m[r]) m[r]={cnt:0,amt:0}; m[r].cnt++; m[r].amt+=paid(o); }); return m; }
+function toggleRepSales(){ const b=$('repSalesBody'), tg=$('repSalesToggle'); if(!b) return; const open=b.style.display==='none'; b.style.display=open?'':'none'; if(tg) tg.textContent=open?'접기 ▲':'펼치기 ▼'; }
 function renderRepSales(){
   const tb=$('repSalesRows'); if(!tb||!ev()) return;
   if($('repSalesEv')) $('repSalesEv').textContent='· '+ev().name;
