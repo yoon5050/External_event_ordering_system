@@ -176,7 +176,7 @@
 <!-- ════════ 로그인 화면 ════════ -->
 <div id="loginView" style="display:none; text-align:center; padding:120px 20px;">
   <div class="brand" style="font-size:18px; margin-bottom:6px;">lowlit collective</div>
-  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 72</span></p>
+  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 75</span></p>
   <button class="btn btn-dark" style="padding:13px 28px;" onclick="login()">Google 계정으로 로그인</button>
   <p id="loginErr" style="color:var(--red); font-size:12.5px; margin-top:16px;"></p>
 </div>
@@ -241,6 +241,7 @@
         <button id="otab_all" class="btn btn-dark btn-sm" onclick="setOrderTab('all')">전체 <span id="otc_all">0</span></button>
         <button id="otab_del" class="btn btn-line btn-sm" onclick="setOrderTab('del')">🚚 배송 <span id="otc_del">0</span></button>
         <button id="otab_pick" class="btn btn-line btn-sm" onclick="setOrderTab('pick')">🏬 현장수령 <span id="otc_pick">0</span></button>
+        <button id="otab_unship" class="btn btn-line btn-sm" onclick="setOrderTab('unship')">📦 미발송 <span id="otc_unship">0</span></button>
       </div>
       <div class="toolbar">
         <input type="text" id="q" placeholder="🔍 이름·연락처·주문번호 검색" oninput="renderOrders()">
@@ -251,6 +252,8 @@
           <option value="">상태: 전체</option><option>상품준비</option><option>발송완료</option>
         </select>
         <div class="spacer"></div>
+        <button class="btn btn-line btn-sm" onclick="printPicklist()">📦 출고준비 인쇄</button>
+        <button class="btn btn-line btn-sm" onclick="printShipLabels()">🏷 박스 라벨 (폼텍3109)</button>
         <button class="btn btn-line btn-sm" onclick="printAllOrders()">🖨️ 주문서 한번에 출력</button>
         <button class="btn btn-line btn-sm" onclick="exportXlsx()">📤 엑셀 내보내기</button>
       </div>
@@ -729,7 +732,7 @@
   </div>
   </section>
 
-  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 72</div>
+  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 75</div>
 </div>
 </div>
 
@@ -1580,18 +1583,21 @@ function renderOrders(){
   let list=evOrders().filter(o=>
     (!q||o.no.toLowerCase().includes(q)||o.customer.name.toLowerCase().includes(q)||o.customer.phone.includes(q)) &&
     (!fp||o.pay.startsWith(fp)) && (!fs||o.ship===fs));
-  const dCount=list.filter(o=>(o.receipt||'배송')==='배송').length, pCount=list.filter(o=>o.receipt==='현장수령').length;
-  if($('otc_all')){ $('otc_all').textContent=list.length; $('otc_del').textContent=dCount; $('otc_pick').textContent=pCount; }
-  ['all','del','pick'].forEach(k=>{ const b=$('otab_'+k); if(b) b.className='btn btn-sm '+(orderTab===k?'btn-dark':'btn-line'); });
+  const dCount=list.filter(o=>(o.receipt||'배송')==='배송').length, pCount=list.filter(o=>o.receipt==='현장수령').length, uCount=list.filter(o=>(o.receipt||'배송')==='배송'&&o.ship!=='발송완료').length;
+  if($('otc_all')){ $('otc_all').textContent=list.length; $('otc_del').textContent=dCount; $('otc_pick').textContent=pCount; if($('otc_unship')) $('otc_unship').textContent=uCount; }
+  ['all','del','pick','unship'].forEach(k=>{ const b=$('otab_'+k); if(b) b.className='btn btn-sm '+(orderTab===k?'btn-dark':'btn-line'); });
   if(orderTab==='del') list=list.filter(o=>(o.receipt||'배송')==='배송');
   else if(orderTab==='pick') list=list.filter(o=>o.receipt==='현장수령');
+  else if(orderTab==='unship') list=list.filter(o=>(o.receipt||'배송')==='배송'&&o.ship!=='발송완료');
   const tb=$('orderRows'); tb.innerHTML='';
   $('orderEmpty').style.display=list.length?'none':'';
   list.forEach(o=>{
     const items=o.items.map(i=>`${esc(i.name)}${i.option?'('+esc(i.option)+')':''}${i.gift?'🎁':''}×${i.qty}`).join(', ')+(o.etc?` / 기타: ${esc(o.etc)}`:'');
     const shipCls=o.ship==='발송완료'?'p-blue':'p-gray';
-    const memo=[o.staffMemo&&('📌 '+o.staffMemo), o.memoBad&&('😕 '+o.memoBad), o.memoWhy&&('💡 '+o.memoWhy)].filter(Boolean).join('\n');
-    tb.insertAdjacentHTML('beforeend',`<tr style="${o.hopeDate?'background:#fff3df;':''}">
+    const dfltNote=(db.settings.shipNote||DEFAULT_SHIPNOTE||'').trim(); const cNote=(o.shipNotice||'').trim();
+    const memo=[cNote&&cNote!==dfltNote&&('🚚 '+cNote), o.shipMemo&&('🚪 '+o.shipMemo), o.staffMemo&&('📌 '+o.staffMemo), o.memoBad&&('😕 '+o.memoBad), o.memoWhy&&('💡 '+o.memoWhy)].filter(Boolean).join('\n');
+    const done=o.ship==='발송완료';
+    tb.insertAdjacentHTML('beforeend',`<tr style="${done?'background:#f3f3f1;color:#9a9a9a;opacity:.6;':(o.hopeDate?'background:#fff3df;':'')}">
       <td><b>${o.no}</b>${o.hopeDate?'<br><span class="pill p-amber" style="margin-top:3px;display:inline-block;white-space:nowrap;">🗓️ 희망 '+o.hopeDate.slice(5)+'</span>':''}${o.giftShip?'<br><span class="pill" style="background:#efe3ff;color:#6b3fa0;margin-top:2px;display:inline-block;white-space:nowrap;font-size:10px;padding:2px 6px;">🎁📦 택배</span>':''}</td>
       <td style="white-space:nowrap;">${o.ts.slice(5,10)} ${o.ts.slice(11,16)}</td>
       <td><b>${esc(o.customer.name)||'🏬 현장수령'}</b>${o.customer.phone?'<br><span style="color:var(--sub);font-size:11.5px;white-space:nowrap;">'+esc(o.customer.phone)+'</span>':''}${o.rep?'<br><span style="color:var(--sub);font-size:11px;white-space:nowrap;">🧑‍💼 '+esc(o.rep)+'</span>':''}</td>
@@ -1682,7 +1688,7 @@ function openDetail(id){
     ${_gk.length?`<div style="background:${o.giftShip?'#f6f0ff':'#fff3df'};border:2px solid ${o.giftShip?'#9a6bce':'#e08a1e'};border-radius:8px;padding:10px 12px;margin-bottom:10px;color:${o.giftShip?'#6b3fa0':'#a35a00'};font-weight:700;font-size:13px;">${o.giftShip?'🎁📦 증정품 택배 동봉':'🎁 증정품 전달 필요'} — ${_gk.map(k=>k+' ×'+_gm[k]).join(', ')}<div style="font-weight:400;font-size:12px;color:#8a744f;margin-top:3px;">${o.giftShip?'제품과 함께 택배로 발송하세요.':'주문서에는 표시되지 않아요. 고객에게 증정품을 꼭 함께 전달하세요.'}</div></div>`:''}
     <p style="font-size:13px;line-height:1.9;">
       <b>${esc(o.customer.name)}</b> · ${esc(o.customer.phone)}${o.customer.email?' · '+esc(o.customer.email):''}<br>
-      📦 ${esc(o.customer.addr)}${o.shipMemo?'<br>🚪 배송 메모: '+esc(o.shipMemo):''}<br>
+      📦 ${esc(o.customer.addr)}${o.shipMemo?'<br>🚪 배송 메모: '+esc(o.shipMemo):''}${(o.shipNotice&&o.shipNotice.trim()!==(db.settings.shipNote||DEFAULT_SHIPNOTE||'').trim())?'<br><b style="color:#a35a00;">🚚 배송 안내(요청): '+esc(o.shipNotice)+'</b>':''}<br>
       🧑‍💼 ${esc(o.rep)||'-'} · ${o.receipt==='현장수령'?'🏬 현장수령':'🚚 배송'} · 💳 ${esc(o.pay)} · 🚚 ${o.ship}${o.hopeDate?' · 희망배송일 '+o.hopeDate:''} · 🕐 ${o.ts.slice(0,16).replace('T',' ')}
     </p>
     <table style="margin:12px 0;"><thead><tr><th>제품</th><th>옵션</th><th class="num">단가</th><th class="num">수량</th><th class="num">금액</th></tr></thead>
@@ -2014,6 +2020,98 @@ function printProductList(){
     </table>
   </div>`;
   setTimeout(()=>window.print(),100);
+}
+/* ── 출고 준비 · 박스 라벨 (MD 플랫폼 이식) ── */
+function _noteReq(o){ const d=(db.settings.shipNote||DEFAULT_SHIPNOTE||'').trim(); const c=(o.shipNotice||'').trim(); return (c&&c!==d)?c:''; }
+function _pickOrders(){
+  const q=($('q').value||'').toLowerCase(), fp=$('fPay').value, fs=$('fShip').value;
+  const list=evOrders().filter(o=>(o.receipt||'배송')==='배송' &&
+    (!q||o.no.toLowerCase().includes(q)||o.customer.name.toLowerCase().includes(q)||o.customer.phone.includes(q)) &&
+    (!fp||o.pay.startsWith(fp)) && (fs?o.ship===fs:o.ship!=='발송완료'));
+  return list.slice().sort((a,b)=>(a.ts||'').localeCompare(b.ts||''));
+}
+function _pickItems(o){ return (o.items||[]).filter(i=>!i.gift||o.giftShip); }
+function maskName(s){s=String(s||'').trim();if(s.length<=1)return s;if(s.length===2)return s[0]+'*';return s[0]+'*'.repeat(s.length-2)+s[s.length-1];}
+function regionOf(addr){const s=String(addr||'').replace(/^\s*\([^)]*\)\s*/,'').trim();
+  const M=[['서울','서울'],['인천','인천'],['부산','부산'],['대구','대구'],['광주','광주'],['대전','대전'],['울산','울산'],['세종','세종'],['경기','경기'],['강원','강원'],['충청북도','충북'],['충북','충북'],['충청남도','충남'],['충남','충남'],['전라북도','전북'],['전북','전북'],['전라남도','전남'],['전남','전남'],['경상북도','경북'],['경북','경북'],['경상남도','경남'],['경남','경남'],['제주','제주']];
+  for(const kv of M){if(s.startsWith(kv[0]))return kv[1];}
+  const t=s.split(/\s+/)[0]||'';return t.replace(/(특별자치시|특별자치도|특별시|광역시|특별자치|자치도|도|시)$/,'');}
+function regionLabel(addr){const s=String(addr||'').replace(/^\s*\([^)]*\)\s*/,'').trim();if(!s)return regionOf(addr);
+  const sido=regionOf(s);const parts=s.split(/\s+/);
+  const gus=parts.filter((t,i)=>i>0&&/(시|군|구)$/.test(t)).slice(0,2);
+  return [sido].concat(gus).filter(Boolean).join(' ');}
+function printPicklist(){
+  const orders=_pickOrders();
+  if(!orders.length){ alert('출고 준비할 배송 주문이 없습니다.\n(상품준비 상태의 배송 주문이 대상이에요. 검색·필터를 확인해 주세요.)'); return; }
+  const E=s=>String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+  const memoCell=o=>{ const req=_noteReq(o), sm=String(o.shipMemo||'').trim(), am=String(o.staffMemo||'').trim(); const p=[];
+    if(req) p.push(`<div class="req"><b>요청</b> ${E(req)}</div>`);
+    if(sm) p.push(`<div class="msg"><b>배송</b> ${E(sm)}</div>`);
+    if(am) p.push(`<div class="amemo"><b>담당</b> ${E(am)}</div>`);
+    if(o.giftShip) p.push(`<div class="gift"><b>증정</b> 증정품 택배 동봉</div>`);
+    return p.length?p.join(''):'<span class="nomemo">-</span>'; };
+  const agg={}; let itemCnt=0;
+  const listRows=orders.map(o=>{ const rows=_pickItems(o); if(!rows.length) return '';
+    return rows.map((it,idx)=>`<tr>`
+      +(idx===0?`<td rowspan="${rows.length}" class="ono">${E(o.no)}</td><td rowspan="${rows.length}" class="mc">${E(o.customer.name||'')}<div class="sub">${E(o.customer.phone||'')}</div></td><td rowspan="${rows.length}" class="mc addr">${E(o.customer.addr||'')}</td>`:'')
+      +`<td class="pname">${E(it.name||'')}${it.gift?' <span class="gtag">🎁증정</span>':''}</td><td class="c">${E(it.option||'')}</td><td class="c qty">${it.qty||0}</td>`
+      +(idx===0?`<td rowspan="${rows.length}" class="c wishc">${o.hopeDate?'<b>'+E(o.hopeDate)+'</b>':'<span class="nomemo">-</span>'}</td><td rowspan="${rows.length}" class="memoc">${memoCell(o)}</td>`:'')
+      +`</tr>`).join('');
+  }).join('');
+  orders.forEach(o=>_pickItems(o).forEach(it=>{ itemCnt++; const key=(it.name||'')+'|'+(it.option||''); if(!agg[key]) agg[key]={name:it.name||'',option:it.option||'',qty:0}; agg[key].qty+=(+it.qty||0); }));
+  const aggArr=Object.values(agg).sort((a,b)=>(a.name||'').localeCompare(b.name||'')||(a.option||'').localeCompare(b.option||''));
+  const totQty=aggArr.reduce((s,a)=>s+a.qty,0);
+  const aggRows=aggArr.map(a=>`<tr><td>${E(a.name)}</td><td class="c">${E(a.option)}</td><td class="c qty">${a.qty}</td></tr>`).join('');
+  const w=window.open('','_blank');
+  w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>출고 준비 목록</title><style>'
+    +"*{box-sizing:border-box}body{font-family:'Helvetica Neue',Arial,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;margin:0;color:#111;padding:8mm 7mm}"
+    +'.top{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid #111;padding-bottom:8px;margin-bottom:6px}'
+    +'.logotxt{font-size:24px;font-weight:800;letter-spacing:-1px}.ttl{font-size:17px;font-weight:800}'
+    +'.meta{font-size:11px;color:#666;margin:8px 0 6px}'
+    +'h3{font-size:13px;margin:18px 0 6px;border-bottom:1.5px solid #111;padding-bottom:4px}'
+    +'table{width:100%;border-collapse:collapse;font-size:9.5px;margin-bottom:6px;table-layout:fixed}'
+    +'th{background:#f3f3f3;border:1px solid #ccc;padding:4px 5px;text-align:left;font-weight:700}'
+    +'td{border:1px solid #ddd;padding:4px 5px;vertical-align:top;overflow-wrap:anywhere;line-height:1.4}'
+    +'.c{text-align:center}.qty{font-weight:700}.sub{font-size:9px;color:#888;word-break:break-all}.addr{font-size:9.5px;color:#444;line-height:1.4}'
+    +'.ono{font-size:9px;font-weight:600;vertical-align:top;word-break:break-all;line-height:1.35}.mc{vertical-align:top}.pname{font-weight:600;line-height:1.35}.gtag{font-size:8px;color:#1a4fb0;font-weight:700}'
+    +'.memoc{font-size:9px;line-height:1.4;vertical-align:top}.memoc .req{color:#a35a00}.memoc .msg{color:#1a4fb0;margin-top:3px}.memoc .amemo{color:#c0497a;margin-top:3px}.memoc .gift{color:#6b3fa0;margin-top:3px}.memoc b{font-size:7.5px;padding:0 3px;border-radius:3px;margin-right:3px;color:#fff;white-space:nowrap}.memoc .req b{background:#a35a00}.memoc .msg b{background:#1a4fb0}.memoc .amemo b{background:#c0497a}.memoc .gift b{background:#6b3fa0}.memoc .nomemo,.wishc .nomemo{color:#ccc}'
+    +'.wishc{vertical-align:top;font-size:9px}.wishc b{color:#0b8a4b;font-weight:800;font-size:9.5px;white-space:nowrap}'
+    +'tfoot td{font-weight:800;background:#fafafa}tr{page-break-inside:avoid}'
+    +'@media print{@page{size:A4;margin:5mm}}'
+    +'</style></head><body>'
+    +`<div class="top"><div class="logotxt">lowlit.</div><div class="ttl">출고 준비 목록 · ${E(ev().name)}</div></div>`
+    +`<div class="meta">생성일 ${today()} · 배송 주문 ${orders.length}건 · 품목 ${itemCnt}줄 · 총 ${totQty}개</div>`
+    +`<h3>① 출고 목록</h3><table><colgroup><col style="width:68px"><col style="width:76px"><col><col style="width:72px"><col style="width:70px"><col style="width:24px"><col style="width:56px"><col style="width:150px"></colgroup><thead><tr><th>주문번호</th><th>받는분 · 연락처</th><th>주소</th><th>제품</th><th class="c">옵션/색상</th><th class="c">수량</th><th class="c">희망배송일</th><th>메모 (요청·배송·담당)</th></tr></thead><tbody>${listRows}</tbody></table>`
+    +`<h3>② 제품 · 옵션별 집계</h3><table><thead><tr><th>제품명</th><th class="c" style="width:130px">옵션/색상</th><th class="c" style="width:80px">필요수량</th></tr></thead><tbody>${aggRows}</tbody><tfoot><tr><td colspan="2" class="c">합계</td><td class="c qty">${totQty}</td></tr></tfoot></table>`
+    +'<scr'+'ipt>window.onload=function(){setTimeout(function(){window.print();},300);};</scr'+'ipt></body></html>');
+  w.document.close();
+}
+function printShipLabels(){
+  const A=_pickOrders();
+  if(!A.length){ alert('라벨을 인쇄할 배송 주문이 없습니다.\n(상품준비 상태의 배송 주문이 대상이에요.)'); return; }
+  let start=parseInt(prompt('라벨 시작 위치 (1~18)\n폼텍3109는 좌→우 · 위→아래 순서. 라벨지에 남은 칸 번호를 입력하세요.\n(배송 주문 '+A.length+'건 · 라벨 '+A.length+'장 인쇄)','1'),10);
+  if(!start||start<1)start=1;if(start>18)start=18;
+  const E=s=>String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+  const cells=[];
+  A.forEach(o=>{ const its=_pickItems(o); const first=its[0]?E(its[0].name||''):''; const more=its.length>1?' 외 '+(its.length-1)+'건':''; const rg=regionLabel(o.customer.addr);
+    cells.push(`<div class="label ship"><div class="L"><div class="logo">lowlit<span>.</span></div><div class="nm">${E(maskName(o.customer.name))}${rg?`<span class="rg">${E(rg)}</span>`:''}</div><div class="pd">${first}${more}</div></div></div>`); });
+  const all=[];for(let k=0;k<start-1;k++)all.push('<div class="label"></div>');cells.forEach(c=>all.push(c));
+  const PER=18;const pages=[];for(let i=0;i<all.length;i+=PER)pages.push(`<div class="page">${all.slice(i,i+PER).join('')}</div>`);
+  const w=window.open('','_blank');
+  w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>박스 라벨 (폼텍3109)</title><style>'
+    +"*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,'Pretendard','Apple SD Gothic Neo',sans-serif;color:#000;background:#ececec}"
+    +'.page{width:210mm;height:297mm;background:#fff;margin:0 auto 14px;padding:13.5mm 3.7mm;display:grid;grid-template-columns:100mm 100mm;grid-template-rows:repeat(9,29.9mm);column-gap:2.5mm;row-gap:0}'
+    +'.label{width:100mm;height:29.9mm;page-break-inside:avoid;overflow:hidden}'
+    +'.label.ship{padding:3mm 4mm 3mm 5mm;display:flex;align-items:stretch;gap:3mm}'
+    +'.label.ship .L{flex:1;display:flex;flex-direction:column;justify-content:center;min-width:0}'
+    +'.label.ship .logo{font-family:"Helvetica Neue",Arial,sans-serif;font-size:9pt;font-weight:800;letter-spacing:-.5px;color:#111;line-height:1}'
+    +'.label.ship .nm{font-size:15pt;font-weight:800;letter-spacing:.3px;line-height:1.12;margin-top:1.5mm;white-space:normal;overflow:hidden}'
+    +'.label.ship .nm .rg{font-size:11pt;font-weight:700;color:#222;letter-spacing:0;margin-left:5px}'
+    +'.label.ship .pd{font-size:8.5pt;font-weight:600;color:#444;white-space:normal;overflow:hidden;margin-top:1mm;line-height:1.2}'
+    +'@media print{body{background:#fff}.page{box-shadow:none;margin:0;page-break-after:always}.page:last-child{page-break-after:auto}@page{size:A4;margin:0}}'
+    +'</style></head><body>'+pages.join('')
+    +'<scr'+'ipt>window.onload=function(){setTimeout(function(){window.print();},350);};</scr'+'ipt></body></html>');
+  w.document.close();
 }
 function printAllOrders(){
   // 주문목록의 현재 필터/검색 결과를 그대로, 오래된 순으로 한 장씩 출력
@@ -2412,9 +2510,9 @@ async function extractCardInfo(card){
 
 /* ── 엑셀 내보내기 ── */
 function exportXlsx(){
-  const oRows=[['전시','주문번호','접수일시','판매담당자','구매자','연락처','이메일','배송주소','수령방법','희망배송일','배송메모','증정품택배','제품명','옵션','단가','수량','금액','기타구매품','주문합계','이벤트할인','이벤트명','할인','배송비','결제금액','결제수단','발송상태','담당자메모','아쉬운점','구매결정요인']];
+  const oRows=[['전시','주문번호','접수일시','판매담당자','구매자','연락처','이메일','배송주소','수령방법','희망배송일','배송메모','배송안내요청','증정품택배','제품명','옵션','단가','수량','금액','기타구매품','주문합계','이벤트할인','이벤트명','할인','배송비','결제금액','결제수단','발송상태','담당자메모','아쉬운점','구매결정요인']];
   evOrders().slice().reverse().forEach(o=>{
-    const base=[ev().name,o.no,o.ts.slice(0,16).replace('T',' '),o.rep||'',o.customer.name,o.customer.phone,o.customer.email,o.customer.addr,o.receipt||'배송',o.hopeDate,o.shipMemo||'',o.giftShip?'택배동봉':''];
+    const base=[ev().name,o.no,o.ts.slice(0,16).replace('T',' '),o.rep||'',o.customer.name,o.customer.phone,o.customer.email,o.customer.addr,o.receipt||'배송',o.hopeDate,o.shipMemo||'',_noteReq(o),o.giftShip?'택배동봉':''];
     if(o.items.length) o.items.forEach((i,n)=>{
       oRows.push([...base, i.name+(i.gift?' (증정)':''), i.option, i.price, i.qty, i.price*i.qty,
         n===0?o.etc:'', n===0?o.total:'', n===0?(o.promoDiscount||0):'', n===0?((o.promoNames||[]).join(', ')):'', n===0?(o.discount||0):'', n===0?(o.shipFee||0):'', n===0?paid(o):'', o.pay, o.ship,
