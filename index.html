@@ -176,7 +176,7 @@
 <!-- ════════ 로그인 화면 ════════ -->
 <div id="loginView" style="display:none; text-align:center; padding:120px 20px;">
   <div class="brand" style="font-size:18px; margin-bottom:6px;">lowlit collective</div>
-  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 91</span></p>
+  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 95</span></p>
   <button class="btn btn-dark" style="padding:13px 28px;" onclick="login()">Google 계정으로 로그인</button>
   <p id="loginErr" style="color:var(--red); font-size:12.5px; margin-top:16px;"></p>
 </div>
@@ -604,7 +604,7 @@
       <div class="card">
         <h2>🎪 전시 관리</h2>
         <div class="scroll-x"><table>
-          <thead><tr><th>전시명</th><th class="num">주문</th><th class="num">제품</th><th></th></tr></thead>
+          <thead><tr><th>전시명</th><th>주문번호 접두어</th><th class="num">주문</th><th class="num">제품</th><th></th></tr></thead>
           <tbody id="evRows"></tbody>
         </table></div>
       </div>
@@ -784,7 +784,7 @@
   </div>
   </section>
 
-  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 91</div>
+  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 95</div>
 </div>
 </div>
 
@@ -1019,6 +1019,11 @@ function createNewEvent(){
   evDlg.close(); renderAll();
  }catch(err){ alert('전시 만들기 오류: '+err.message); }
 }
+function koInitials(s,max){ const CHO=['G','K','N','D','T','L','M','B','P','S','S','','J','J','C','K','T','P','H']; const JUNG=['A','A','Y','Y','E','E','Y','Y','O','W','W','O','Y','U','W','W','W','Y','E','U','I']; let out=''; for(const ch of String(s||'')){ const c=ch.charCodeAt(0)-0xAC00; if(c<0||c>11171) continue; const cho=Math.floor(c/588), jung=Math.floor((c%588)/28); out+=CHO[cho]||JUNG[jung]; if(out.length>=(max||3)) break; } return out; }
+function wordInitial(w){ return /^[A-Za-z]/.test(w)?w[0].toUpperCase():koInitials(w,1); }
+function evCodeAuto(e){ const n=String((e&&e.name)||'').trim(); const words=n.split(/[\s·,&\-_/()]+/).filter(w=>/[가-힣A-Za-z]/.test(w)); if(!words.length) return 'LL'; if(words.length>=2) return words.map(wordInitial).join('').slice(0,5)||'LL'; const w=words[0]; if(/^[A-Za-z]/.test(w)) return w.replace(/[^A-Za-z0-9]/g,'').toUpperCase().slice(0,4); return koInitials(w,3)||'LL'; }
+function evCode(e){ return String((e&&e.code)||'').trim()||evCodeAuto(e); }
+function setEvCode(id,val){ const e=db.events.find(x=>x.id===id); if(!e) return; e.code=String(val||'').toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,8); save(); renderEvRows(); }
 function toggleEventLock(id){
   const e=db.events.find(x=>x.id===id); if(!e) return;
   e.locked=!e.locked; save(); renderEvRows(); renderAll();
@@ -1617,7 +1622,7 @@ async function submitCustOrder(){
     submitting=false; if(btn){ btn.disabled=false; btn.textContent='보내기'; }
     return;
   }
-  const no='LL-'+seq+'-'+today()+'-'+(String(phone||'').replace(/\D/g,'')||name||seq);
+  const no=evCode(ev())+today().slice(2,4)+'-'+today().slice(5,7)+today().slice(8,10)+'-'+(100+seq);
   const order={
     id:'o'+Date.now(), eventId:db.currentEventId, no, seq, ts:nowLocal(),
     items:[...items,...giftItems], etc, total:items.reduce((s,i)=>s+i.price*i.qty,0),
@@ -1891,6 +1896,7 @@ function renderEvRows(){
   db.events.forEach(e=>{
     tb.insertAdjacentHTML('beforeend',`<tr>
       <td style="white-space:nowrap;"><b>${esc(e.name)}</b>${e.id===db.currentEventId?' <span class="pill p-blue">현재</span>':''}${e.locked?' <span class="pill p-gray">🔒 마감</span>':''}</td>
+      <td><input type="text" value="${esc(e.code||'')}" placeholder="${esc(evCodeAuto(e))}" style="width:96px;" onchange="setEvCode('${e.id}',this.value)" title="영문·숫자만 · 비우면 자동(영문 없으면 LL) · 예: ${esc(evCode(e))}26-0907-101"></td>
       <td class="num">${evOrders(e.id).length}건</td>
       <td class="num">${e.products.length}개</td>
       <td style="white-space:nowrap;">
