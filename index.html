@@ -176,7 +176,7 @@
 <!-- ════════ 로그인 화면 ════════ -->
 <div id="loginView" style="display:none; text-align:center; padding:120px 20px;">
   <div class="brand" style="font-size:18px; margin-bottom:6px;">lowlit collective</div>
-  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 90</span></p>
+  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 91</span></p>
   <button class="btn btn-dark" style="padding:13px 28px;" onclick="login()">Google 계정으로 로그인</button>
   <p id="loginErr" style="color:var(--red); font-size:12.5px; margin-top:16px;"></p>
 </div>
@@ -784,7 +784,7 @@
   </div>
   </section>
 
-  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 90</div>
+  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 91</div>
 </div>
 </div>
 
@@ -1702,11 +1702,11 @@ function renderOrders(){
     const done=shipped||pickup; const open=openShip.has(o.id);
     const labelCell=pickup?`<span style="color:var(--sub);">—</span>`
       :`<input type="number" min="1" value="${o.labelCount||1}" style="width:50px;text-align:center;padding:3px 4px;" onchange="setLabelCount('${o.id}',this.value)" title="박스 라벨 장수 (박스 수)"> <span style="font-size:11px;color:var(--sub);">장</span>`;
-    const noParts=String(o.no).split('-'); const noHtml=noParts.length>=5?`${esc(noParts[0]+'-'+noParts[1])}<br><span style="font-size:10.5px;color:var(--sub);font-weight:500;">${esc(noParts.slice(2).join('-'))}</span>`:esc(o.no);
+    const noParts=String(o.no).split('-'); const noHtml=noParts.length>=5?`${esc(noParts[0]+'-'+noParts[1])}<br><span style="font-size:10.5px;color:var(--sub);font-weight:500;">${esc(noParts.slice(2,5).join('-'))}</span>`:esc(o.no);
     tb.insertAdjacentHTML('beforeend',`<tr style="${done?'background:#f3f3f1;color:#9a9a9a;opacity:.6;':(o.hopeDate?'background:#fff3df;':'')}">
       <td><input type="checkbox" class="omChk" data-id="${o.id}" ${selOrders.has(o.id)?'checked':''} onchange="toggleSel('${o.id}',this.checked)" style="width:15px;height:15px;"></td>
       <td>${pickup?'':`<button class="btn btn-line btn-sm" style="padding:2px 7px;" onclick="toggleShipPanel('${o.id}')" title="박스·송장 정보">${open?'▴':'▾'}</button>`}</td>
-      <td style="white-space:nowrap;"><b>${noHtml}</b>${shipped?'<br><span class="pill p-blue" style="font-size:10px;margin-top:2px;display:inline-block;">발송완료</span>':''}${o.hopeDate?'<br><span class="pill p-amber" style="margin-top:3px;display:inline-block;white-space:nowrap;">🗓️ 희망 '+o.hopeDate.slice(5)+'</span>':''}${o.giftShip?'<br><span class="pill" style="background:#efe3ff;color:#6b3fa0;margin-top:2px;display:inline-block;white-space:nowrap;font-size:10px;padding:2px 6px;">🎁📦 택배</span>':''}</td>
+      <td style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${esc(o.no)}"><b>${noHtml}</b>${shipped?'<br><span class="pill p-blue" style="font-size:10px;margin-top:2px;display:inline-block;">발송완료</span>':''}${o.hopeDate?'<br><span class="pill p-amber" style="margin-top:3px;display:inline-block;white-space:nowrap;">🗓️ 희망 '+o.hopeDate.slice(5)+'</span>':''}${o.giftShip?'<br><span class="pill" style="background:#efe3ff;color:#6b3fa0;margin-top:2px;display:inline-block;white-space:nowrap;font-size:10px;padding:2px 6px;">🎁📦 택배</span>':''}</td>
       <td style="white-space:nowrap;">${o.ts.slice(5,10)} ${o.ts.slice(11,16)}</td>
       <td><b>${esc(o.customer.name)||'🏬 현장수령'}</b>${o.customer.phone?'<br><span style="color:var(--sub);font-size:11.5px;white-space:nowrap;">'+esc(o.customer.phone)+'</span>':''}${o.rep?'<br><span style="color:var(--sub);font-size:11px;white-space:nowrap;">🧑‍💼 '+esc(o.rep)+'</span>':''}</td>
       <td style="line-height:1.5;">${items}</td>
@@ -1738,6 +1738,7 @@ function sendAlim(phone,templateId,o,senddate,kind){
   const s=db.settings; kind=kind||'알림톡';
   const miss=[]; if(!s.kakaoRelayUrl) miss.push('릴레이 URL'); if(!s.kakaoSenderKey) miss.push('채널 ID'); if(!templateId) miss.push('템플릿 ID'); if(!s.kakaoSender) miss.push('발신번호');
   if(miss.length){ alimNote(kind,phone,'❌ 설정 누락: '+miss.join(', ')); return; }
+  if(!/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec/.test(String(s.kakaoRelayUrl).trim())){ alimNote(kind,phone,'❌ 릴레이 URL이 Apps Script 웹앱 주소(…/macros/s/…/exec)가 아님'); return; }
   if(!String(phone||'').replace(/[^0-9]/g,'')){ alimNote(kind,phone,'⏭ 연락처 없음(미발송)'); return; }
   try{ fetch(alimQuery(o,templateId,phone,senddate),{method:'GET',mode:'no-cors'}).then(()=>alimNote(kind,phone,'✅ 요청 보냄'+(senddate?' (예약 '+senddate.slice(0,16)+')':''))).catch(e=>alimNote(kind,phone,'❌ 요청 실패: '+(e&&e.message||e))); }
   catch(e){ alimNote(kind,phone,'❌ 오류: '+(e&&e.message||e)); }
@@ -1752,6 +1753,7 @@ function testAlim(){
   const phone=(($('kakaoTestPhone')&&$('kakaoTestPhone').value)||'').replace(/[^0-9]/g,'');
   if(!phone) miss.push('테스트 번호');
   if(miss.length){ alert('먼저 아래 값을 채우고 저장해 주세요:\n· '+miss.join('\n· ')); return; }
+  if(!/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec/.test(String(s.kakaoRelayUrl).trim())){ alert('릴레이 URL이 Apps Script 웹앱 주소가 아니에요.\n\nApps Script → 배포 → 배포 관리에서 "웹 앱 URL"(https://script.google.com/macros/s/…/exec)을 복사해 넣어주세요.\n(구글 드라이브 "파일 없음" 화면이 뜨면 삭제됐거나 잘못된 배포 주소예요.)'); return; }
   const fake={ customer:{name:'테스트', phone:phone}, no:'TEST-000', ts:today()+'T00:00:00', items:[{name:'테스트상품',option:'',qty:1}], courier:(s.couriers&&s.couriers[0])||'택배사' };
   window.open(alimQuery(fake, s.kakaoTplOrder, phone, ''),'_blank');
   alert('새 탭에서 솔라피 응답(JSON)이 열립니다.\n그 화면을 캡처해서 보내주세요.\n(성공이면 statusCode 2000 계열, 실패면 errorMessage가 보입니다.)');
