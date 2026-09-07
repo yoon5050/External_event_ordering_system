@@ -176,7 +176,7 @@
 <!-- ════════ 로그인 화면 ════════ -->
 <div id="loginView" style="display:none; text-align:center; padding:120px 20px;">
   <div class="brand" style="font-size:18px; margin-bottom:6px;">lowlit collective</div>
-  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 95</span></p>
+  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 96</span></p>
   <button class="btn btn-dark" style="padding:13px 28px;" onclick="login()">Google 계정으로 로그인</button>
   <p id="loginErr" style="color:var(--red); font-size:12.5px; margin-top:16px;"></p>
 </div>
@@ -257,6 +257,7 @@
             <button class="btn btn-line btn-sm" onclick="printShipLabels()">🏷 박스 라벨</button>
             <button class="btn btn-line btn-sm" onclick="printInvoices()">🧾 인보이스</button>
             <button class="btn btn-line btn-sm" onclick="printReturnPdf()" title="교환·반품 신청서 (페어용) PDF 열기 → 인쇄에서 매수 지정">📄 반품신청서</button>
+            <button class="btn btn-dark btn-sm" onclick="exportMdOrders()" title="lowlit-md 판매·운영 → 주문관리에 그대로 업로드하는 양식">⬇ MD 주문 엑셀</button>
           </div>
         </div>
       </div>
@@ -784,7 +785,7 @@
   </div>
   </section>
 
-  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 95</div>
+  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 96</div>
 </div>
 </div>
 
@@ -2240,6 +2241,37 @@ function printShipLabels(){
     +'</style></head><body>'+pages.join('')
     +'<scr'+'ipt>window.onload=function(){setTimeout(function(){window.print();},350);};</scr'+'ipt></body></html>');
   w.document.close();
+}
+/* ── MD 플랫폼(주문관리) 업로드용 엑셀 ── */
+function exportMdOrders(){
+  const sel=_selOrders();
+  const q=($('q').value||'').toLowerCase(), fp=$('fPay').value, fs=$('fShip').value;
+  let list=sel.length?sel:evOrders().filter(o=>
+    (!q||o.no.toLowerCase().includes(q)||o.customer.name.toLowerCase().includes(q)||o.customer.phone.includes(q)) &&
+    (!fp||o.pay.startsWith(fp)) && (!fs||o.ship===fs));
+  if(!sel.length){
+    if(orderTab==='del') list=list.filter(o=>(o.receipt||'배송')==='배송');
+    else if(orderTab==='pick') list=list.filter(o=>o.receipt==='현장수령');
+    else if(orderTab==='unship') list=list.filter(o=>(o.receipt||'배송')==='배송'&&o.ship!=='발송완료');
+  }
+  list=list.slice().sort((a,b)=>(a.ts||'').localeCompare(b.ts||''));
+  if(!list.length){ alert('내보낼 주문이 없습니다.'); return; }
+  const head=['주문번호','주문일','수령자명','수령자 전화번호','우편번호','배송지주소','상세주소','상품명','옵션명','구매수량','판매가','최종주문금액','배송송장번호','택배사명','배송메모'];
+  const rows=[head];
+  list.forEach(o=>{
+    const addrRaw=String(o.customer.addr||''); const zm=addrRaw.match(/\(우편번호\s*:\s*(\d{5})\)/); const zip=zm?zm[1]:''; const addr=addrRaw.replace(/\s*\(우편번호\s*:\s*\d{5}\)\s*/,'').trim();
+    const req=_noteReq(o); const memo=[o.shipMemo||'', req, o.giftShip?'증정품 동봉':''].filter(Boolean).join(' / ');
+    const recv=o.customer.name||(o.receipt==='현장수령'?'현장수령':'');
+    const items=(o.items||[]).filter(i=>!i.gift||o.giftShip);
+    const base=[o.no,(o.ts||'').slice(0,10),recv,o.customer.phone||'',zip,addr,'',];
+    if(!items.length&&!o.etc) rows.push([...base,'','',1,0,paid(o),o.tracking||'',o.courier||'',memo]);
+    items.forEach(i=>rows.push([...base,(i.gift?'(증정) ':'')+(i.name||''),i.option||'',+i.qty||0,+i.price||0,paid(o),o.tracking||'',o.courier||'',memo]));
+    if(o.etc) rows.push([...base,'기타: '+o.etc,'',1,0,paid(o),o.tracking||'',o.courier||'',memo]);
+  });
+  const wb=XLSX.utils.book_new(); const ws=XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols']=[10,12,9,16,8,30,14,18,12,9,9,12,14,11,24].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb, ws, '주문업로드');
+  XLSX.writeFile(wb, `${ev().name.replace(/[\\/:*?"<>|]/g,'')}_MD주문업로드_${today()}.xlsx`);
 }
 /* ── 교환·반품 신청서 (페어용) PDF ── */
 function printReturnPdf(){
