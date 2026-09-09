@@ -176,7 +176,7 @@
 <!-- ════════ 로그인 화면 ════════ -->
 <div id="loginView" style="display:none; text-align:center; padding:120px 20px;">
   <div class="brand" style="font-size:18px; margin-bottom:6px;">lowlit collective</div>
-  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 98</span></p>
+  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 100</span></p>
   <button class="btn btn-dark" style="padding:13px 28px;" onclick="login()">Google 계정으로 로그인</button>
   <p id="loginErr" style="color:var(--red); font-size:12.5px; margin-top:16px;"></p>
 </div>
@@ -383,7 +383,8 @@
       <div class="row">
         <div><label class="f" id="prNLabel">N (기준 수량)</label><input type="number" id="prN" min="1" value="2"></div>
         <div id="prXWrap"><label class="f" id="prXLabel">할인액 (원)</label><input type="number" id="prX" min="0"></div>
-        <div style="flex:1.5;"><label class="f">대상 제품</label><select id="prPid"><option value="">전체 제품 합산</option></select></div>
+        <div style="flex:2;min-width:240px;"><label class="f">대상 제품 <span style="font-weight:400;color:var(--sub);">(여러 개 체크 가능 · 아무것도 안 고르면 전체 합산)</span></label>
+          <div id="prPidBox" style="max-height:150px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:6px 10px;background:#fff;font-size:12.5px;line-height:1.9;"></div></div>
       </div>
       <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;margin:6px 0 10px;"><input type="checkbox" id="prOptIn" style="width:16px;height:16px;accent-color:#111;"> <b>주문 시 체크해야 적용</b> <span style="color:var(--sub);font-size:12px;">(자동 적용 안 함 · 주문서 하단에 체크박스로 표시 · 예: 말띠 할인)</span></label>
       <button class="btn btn-dark btn-sm" onclick="addPromo()">할인 추가</button>
@@ -787,7 +788,7 @@
   </div>
   </section>
 
-  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 98</div>
+  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 100</div>
 </div>
 </div>
 
@@ -1206,7 +1207,9 @@ function addPromo(){
   if(!name){ alert('할인명을 입력해 주세요.'); return; }
   if(!x){ alert('할인값을 입력해 주세요.'); return; }
   if(type==='pct'&&x>100){ alert('할인율은 100% 이하로 입력해 주세요.'); return; }
-  promos().push({id:'pr'+Date.now(), name, type, n, m:1, x, pid:$('prPid').value, optIn:!!($('prOptIn')&&$('prOptIn').checked), active:true});
+  const pids=[...document.querySelectorAll('.prPidChk:checked')].map(c=>c.value);
+  promos().push({id:'pr'+Date.now(), name, type, n, m:1, x, pids, optIn:!!($('prOptIn')&&$('prOptIn').checked), active:true});
+  document.querySelectorAll('.prPidChk').forEach(c=>c.checked=false);
   if($('prOptIn')) $('prOptIn').checked=false;
   $('prName').value=''; $('prX').value='';
   save(); renderPromos(); renderHome();
@@ -1254,11 +1257,10 @@ function renderGifts(){
 }
 function delPromo(id){ if(!confirm('삭제할까요?')) return; ev().promos=promos().filter(p=>p.id!==id); save(); renderPromos(); renderGiftPromos(); renderHome(); }
 function togglePromo(id){ const p=promos().find(x=>x.id===id); p.active=!p.active; save(); renderPromos(); renderGiftPromos(); renderHome(); }
+function pidsOf(p){ return (p&&p.pids&&p.pids.length)?p.pids:((p&&p.pid)?[p.pid]:[]); }
 function promoTarget(p){
-  if(!p.pid) return '전체 제품';
-  if(String(p.pid).startsWith('g:')) return p.pid.slice(2)+' (전체 옵션)';
-  const pr=ev().products.find(x=>x.id===p.pid);
-  return pr?pr.name+(pr.option?' · '+pr.option:''):'(삭제된 제품)';
+  const pl=pidsOf(p); if(!pl.length) return '전체 제품';
+  return pl.map(pid=>{ if(String(pid).startsWith('g:')) return String(pid).slice(2)+' (전체 옵션)'; const pr=ev().products.find(x=>x.id===pid); return pr?pr.name+(pr.option?' · '+pr.option:''):'(삭제된 제품)'; }).join(', ');
 }
 function promoDesc(p){
   if(p.type==='nm') return `${p.n}개 구매 시 ${p.m}개 증정 (증정품 선택)`;
@@ -1268,10 +1270,10 @@ function promoDesc(p){
   return `${p.n}개 이상 구매 시 ${p.x}% 할인`;
 }
 function promoPrice(p){
-  if(!p.pid) return '';
-  let pr;
-  if(String(p.pid).startsWith('g:')) pr=ev().products.find(x=>x.name===p.pid.slice(2));
-  else pr=ev().products.find(x=>x.id===p.pid);
+  const pl=pidsOf(p); if(pl.length!==1) return '';
+  const pid=String(pl[0]); let pr;
+  if(pid.startsWith('g:')) pr=ev().products.find(x=>x.name===pid.slice(2));
+  else pr=ev().products.find(x=>x.id===pid);
   if(!pr) return '';
   if(p.type==='nm') return `${p.n+p.m}개를 ${fmt(pr.price*p.n)}원에 (개당 ${fmt(Math.round(pr.price*p.n/(p.n+p.m)))}원)`;
   if(p.type==='amtset') return `${p.n}개 묶음 ${fmt(pr.price*p.n-p.x)}원`;
@@ -1280,7 +1282,9 @@ function promoPrice(p){
 }
 const GROUP_OPTS=()=>'<option value="">전체 제품 합산</option>'+[...new Set(ev().products.map(p=>p.name))].map(n=>`<option value="g:${esc(n)}">[그룹] ${esc(n)} (전체 옵션 합산)</option>`).join('')+ev().products.map(p=>`<option value="${p.id}">${esc(p.name)}${p.option?' · '+esc(p.option):''}</option>`).join('');
 function renderPromos(){
-  $('prPid').innerHTML=GROUP_OPTS();
+  const pb=$('prPidBox'); if(pb){ const groups=[...new Set(ev().products.map(p=>p.name))];
+    pb.innerHTML=groups.map(n=>`<label style="display:block;cursor:pointer;"><input type="checkbox" class="prPidChk" value="g:${esc(n)}"> <b>[그룹] ${esc(n)}</b> <span style="color:var(--sub);">(전체 옵션 합산)</span></label>`).join('')
+      +ev().products.map(p=>`<label style="display:block;cursor:pointer;padding-left:16px;"><input type="checkbox" class="prPidChk" value="${p.id}"> ${esc(p.name)}${p.option?' · '+esc(p.option):''}</label>`).join(''); }
   const dp=promos().filter(p=>p.type==='amt'||p.type==='pct'||p.type==='amtset');
   const tb=$('promoRows'); tb.innerHTML='';
   $('promoEmpty').style.display=dp.length?'none':'';
@@ -1310,9 +1314,10 @@ function computePromo(items){
   let disc=0; const names=[]; const gifts=[]; const best={}; const setGroups={};
   const _chk=optInChecked();
   promos().filter(p=>p.active&&(!p.optIn||_chk.has(p.id))).forEach(p=>{
-    let scope;
-    if(p.pid&&String(p.pid).startsWith('g:')){ const gname=p.pid.slice(2); scope=items.filter(i=>i.name===gname); }
-    else scope=p.pid?items.filter(i=>i.pid===p.pid):items;
+    let scope; const pl=pidsOf(p);
+    if(!pl.length) scope=items;
+    else scope=items.filter(i=>pl.some(pid=>String(pid).startsWith('g:')?i.name===String(pid).slice(2):i.pid===pid));
+    if(p.optIn){ const Q=optInQty(p.id); if(Q>0){ const units=[]; scope.forEach(i=>{ for(let k=0;k<(+i.qty||0);k++) units.push(Object.assign({},i,{qty:1})); }); units.sort((a,b)=>(+a.price||0)-(+b.price||0)); scope=units.slice(0,Q); } }
     const qty=scope.reduce((s,i)=>s+i.qty,0);
     if(!qty) return;
     if(p.type==='nm'){
@@ -1322,7 +1327,7 @@ function computePromo(items){
       const scopeTotal=scope.reduce((s,i)=>s+i.price*i.qty,0);
       if(scopeTotal>=p.n){ gifts.push({id:p.id,name:p.name,count:p.m,fixedGiftId:p.giftId||'',fixedPid:p.giftPid||''}); names.push(p.name); }
     }else if(p.type==='amtset'){
-      const key=p.pid||'__all__';
+      const key=pidsOf(p).join('|')||'__all__';
       if(!setGroups[key]) setGroups[key]={qty:qty, tiers:[]};
       setGroups[key].tiers.push({n:p.n, x:p.x, name:p.name});
     }else{
@@ -1330,7 +1335,7 @@ function computePromo(items){
       if(p.type==='amt'){ if(qty>=p.n) d=p.x; }
       else { if(qty>=p.n) d=Math.round(scope.reduce((s,i)=>s+i.price*i.qty,0)*p.x/100); }
       // 같은 대상(같은 제품 또는 전체)에 여러 단계가 걸리면 가장 큰 할인 하나만 적용
-      if(d>0){ const key=p.pid||'__all__'; if(!best[key]||d>best[key].disc) best[key]={disc:d,name:p.name}; }
+      if(d>0){ const key=pidsOf(p).join('|')||'__all__'; if(!best[key]||d>best[key].disc) best[key]={disc:d,name:p.name}; }
     }
   });
   Object.keys(setGroups).forEach(k=>{
@@ -1450,8 +1455,13 @@ function prepCustTab(){
 function renderOptIn(){
   const box=$('kOptIn'); if(!box) return;
   const list=promos().filter(p=>p.active&&p.optIn);
-  box.innerHTML=list.map(p=>`<label class="opt-row" style="cursor:pointer;background:#fff7e6;border-radius:6px;padding:9px 11px;margin-top:6px;"><input type="checkbox" id="optin_${p.id}" onchange="updateCustSummary()"><span style="font-weight:700;">🏷️ ${esc(p.name)} 적용</span><span style="color:var(--sub);font-size:12px;margin-left:8px;">${promoDesc(p)}</span></label>`).join('');
+  box.innerHTML=list.map(p=>`<div class="opt-row" style="background:#fff7e6;border-radius:6px;padding:9px 11px;margin-top:6px;flex-wrap:wrap;">
+    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:700;"><input type="checkbox" id="optin_${p.id}" onchange="updateCustSummary()">🏷️ ${esc(p.name)} 적용</label>
+    <span style="color:var(--sub);font-size:12px;margin-left:8px;">${promoDesc(p)}</span>
+    <span style="margin-left:auto;display:flex;align-items:center;gap:6px;font-size:12px;color:var(--sub);white-space:nowrap;">적용 수량 <input type="number" min="1" id="optinq_${p.id}" placeholder="전체" style="width:64px;text-align:center;padding:4px 6px;" oninput="updateCustSummary()"> 개 <span style="font-size:11px;">(비우면 전체 · 저렴한 것부터)</span></span>
+  </div>`).join('');
 }
+function optInQty(id){ const el=$('optinq_'+id); const v=el?parseInt(el.value,10):0; return (v>0)?v:0; }
 function optInChecked(){ const s=new Set(); document.querySelectorAll('#kOptIn input[type=checkbox]:checked').forEach(c=>s.add(c.id.replace('optin_',''))); return s; }
 function renderCustProducts(){
   if(!ev()) return;
@@ -1565,7 +1575,7 @@ function onReceiptChange(){
 function resetCustForm(){
   ['kName','kPhone','kZip','kAddr','kAddr2','kHopeDate','kShipMemo','kEtc','kPayEtc','kStaffMemo','kDiscount'].forEach(i=>{ if($(i)) $(i).value=''; });
   giftSig=''; $('kGifts').innerHTML='';
-  document.querySelectorAll('#kOptIn input[type=checkbox]').forEach(c=>c.checked=false);
+  document.querySelectorAll('#kOptIn input').forEach(c=>{ if(c.type==='checkbox') c.checked=false; else c.value=''; });
   closePostcode();
   $('kEtcChk').checked=false; $('kConsent').checked=false; $('kNoticeChk').checked=false;
   if($('kGiftShip')) $('kGiftShip').checked=false;
