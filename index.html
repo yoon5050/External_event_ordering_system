@@ -176,7 +176,7 @@
 <!-- ════════ 로그인 화면 ════════ -->
 <div id="loginView" style="display:none; text-align:center; padding:120px 20px;">
   <div class="brand" style="font-size:18px; margin-bottom:6px;">lowlit collective</div>
-  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 96</span></p>
+  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 97</span></p>
   <button class="btn btn-dark" style="padding:13px 28px;" onclick="login()">Google 계정으로 로그인</button>
   <p id="loginErr" style="color:var(--red); font-size:12.5px; margin-top:16px;"></p>
 </div>
@@ -785,7 +785,7 @@
   </div>
   </section>
 
-  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 96</div>
+  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 97</div>
 </div>
 </div>
 
@@ -966,6 +966,7 @@ function startApp(u){
   },e=>alert('데이터 연결 오류: '+e.message));
   fs.collection('orders').onSnapshot(snap=>{
     db.orders=snap.docs.map(d=>d.data()).sort((a,b)=>(b.ts||'').localeCompare(a.ts||''));
+    db.orders.forEach(o=>{ if(o.receipt==='현장수령'&&(o.shipFee||0)>0){ o.shipFee=0; saveOrderDoc(o); } });
     if(configReady) renderAll();
   },e=>alert('주문 데이터 오류: '+e.message));
   fs.collection('cards').onSnapshot(snap=>{
@@ -1533,7 +1534,8 @@ function updateCustSummary(){
   const gsc=$('kGiftShipCf'); if(gsc){ gsc.style.display=promo.gifts.length?'':'none'; if(!promo.gifts.length&&$('kGiftShip')) $('kGiftShip').checked=false; }
   const manual=Math.max(0,+($('kDiscount')?.value)||0);
   const qty=items.reduce((s,i)=>s+i.qty,0);
-  const ship=items.reduce((s,i)=>s+(i.ship||0)*i.qty,0);
+  const pickupSel=((document.querySelector('input[name="kReceipt"]:checked')||{}).value==='현장수령');
+  const ship=pickupSel?0:items.reduce((s,i)=>s+(i.ship||0)*i.qty,0);
   const final=total-promo.disc-manual+ship;
   box.innerHTML=`
     <div style="display:flex;justify-content:space-between;"><span>합계 (${qty}개)</span><b>${fmt(total)}원</b></div>
@@ -1547,6 +1549,7 @@ function onReceiptChange(){
   const r=document.querySelector('input[name="kReceipt"]:checked');
   const pickup=r&&r.value==='현장수령';
   ['kNameCf','kPhoneCf','kAddrCf','kHopeCf','kShipMemoCf','kNoticeCf'].forEach(id=>{ const el=$(id); if(el) el.style.display=pickup?'none':''; });
+  if(typeof updateCustSummary==='function') updateCustSummary();
 }
 function resetCustForm(){
   ['kName','kPhone','kZip','kAddr','kAddr2','kHopeDate','kShipMemo','kEtc','kPayEtc','kStaffMemo','kDiscount'].forEach(i=>{ if($(i)) $(i).value=''; });
@@ -1604,7 +1607,7 @@ async function submitCustOrder(){
     else if(d.dataset.pid){ const p=ev().products.find(x=>x.id===d.dataset.pid); if(p){ nm=p.name; pid=p.id; } }
     if(nm){ for(let i=0;i<cnt;i++) giftItems.push({giftId,pid,name:nm,option:'',price:0,qty:1,gift:true,promo:d.dataset.promo}); }
   });
-  const orderShip=items.reduce((s,i)=>s+(i.ship||0)*i.qty,0);
+  const orderShip=(receipt==='현장수령')?0:items.reduce((s,i)=>s+(i.ship||0)*i.qty,0);
 
   // 서버 트랜잭션으로 전시별 순차 번호 발급 (여러 기기 동시 접수에도 안 겹침)
   submitting=true;
