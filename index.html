@@ -65,6 +65,20 @@
   .p-amber{background:#fcf3e2; color:var(--amber);}
   .p-red{background:#fdeeec; color:var(--red);}
   .p-blue{background:#e9effb; color:var(--blue);}
+
+  /* 제품관리 · 제품명 그룹 */
+  #prodRows tr.pgroup > td{background:#f2f2f0; border-bottom:1px solid var(--line); padding:7px 10px;}
+  #prodRows tr.pgroup .pgh{display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
+  #prodRows tr.pgroup .pgname{font-weight:800; font-size:13.5px;}
+  #prodRows tr.pgroup .pgmeta{font-size:11.5px; color:var(--sub); font-weight:500;}
+  #prodRows tr.pgroup .pgacts{margin-left:auto; display:flex; gap:4px; white-space:nowrap;}
+  #prodRows tr.pitem > td:first-child{background:#fbfbfa;}
+  #prodRows .grip{cursor:grab; color:#c2c2be; font-size:13px; letter-spacing:-1px; user-select:none; padding:2px 3px;}
+  #prodRows .grip:active{cursor:grabbing;}
+  #prodRows tr.dragging > td{opacity:.35;}
+  #prodRows tr.dropinto > td{box-shadow:inset 0 3px 0 var(--blue);}
+  #prodRows .fold{background:none; border:none; cursor:pointer; font-size:11px; color:var(--sub); padding:0 2px; font-family:inherit;}
+  #prodRows .dot{display:inline-block; width:11px; height:11px; border-radius:50%; border:1px solid rgba(0,0,0,.12); vertical-align:-1px;}
   .p-gray{background:#efefed; color:#777;}
 
   .stat-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-bottom:16px;}
@@ -176,7 +190,7 @@
 <!-- ════════ 로그인 화면 ════════ -->
 <div id="loginView" style="display:none; text-align:center; padding:120px 20px;">
   <div class="brand" style="font-size:18px; margin-bottom:6px;">lowlit collective</div>
-  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 100</span></p>
+  <p style="color:var(--sub); font-size:13px; margin-bottom:28px;">전시 주문관리 플랫폼 · @lowlit.co 계정 전용<br><span style="font-size:11px; color:#bbb;">BUILD 101</span></p>
   <button class="btn btn-dark" style="padding:13px 28px;" onclick="login()">Google 계정으로 로그인</button>
   <p id="loginErr" style="color:var(--red); font-size:12.5px; margin-top:16px;"></p>
 </div>
@@ -357,11 +371,14 @@
 
     <div class="card">
       <h2>📋 등록된 제품 <span class="hint" id="prodEvName"></span>
-        <button class="btn btn-line btn-sm" style="margin-left:auto;" onclick="printProductList()">📄 제품 체크리스트 PDF</button>
+        <button class="btn btn-line btn-sm" style="margin-left:auto;" id="prodFoldBtn" onclick="toggleAllProdGroups()">전체 접기</button>
+        <button class="btn btn-line btn-sm" onclick="sortProdGroups()">제품명순 정렬</button>
+        <button class="btn btn-line btn-sm" onclick="printProductList()">📄 제품 체크리스트 PDF</button>
       </h2>
+      <p style="font-size:11.5px;color:var(--sub);margin:-6px 0 12px;line-height:1.6;">같은 제품명끼리 묶여서 보입니다. 회색 줄의 <b>⣿</b>를 끌면 제품 묶음 전체가 움직이고, 옵션 줄의 <b>⣿</b>를 끌면 그 묶음 안에서만 순서가 바뀝니다. 끌기가 어려우면 ▲▼ 버튼을 쓰세요.</p>
       <div class="scroll-x">
       <table>
-        <thead><tr><th>색상</th><th>제품명</th><th>옵션</th><th class="num">정가</th><th class="num">판매가</th><th class="num">배송비</th><th class="num">준비수량</th><th>고객화면 노출</th><th></th></tr></thead>
+        <thead><tr><th style="width:22px;"></th><th>색상</th><th>제품명</th><th>옵션</th><th class="num">정가</th><th class="num">판매가</th><th class="num">배송비</th><th class="num">준비수량</th><th>고객화면 노출</th><th></th></tr></thead>
         <tbody id="prodRows"></tbody>
       </table>
       </div>
@@ -788,7 +805,7 @@
   </div>
   </section>
 
-  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 100</div>
+  <div class="foot">LOWLIT 전시 주문관리 v1.0 · BUILD 101</div>
 </div>
 </div>
 
@@ -1132,21 +1149,168 @@ function editField(id,field,v){
 }
 function editShip(id,v){ const p=ev().products.find(p=>p.id===id); if(p){ p.ship=Math.max(0,+v||0); save(); } }
 function toggleVisible(id){ const p=ev().products.find(p=>p.id===id); p.visible=p.visible===false?true:false; save(); renderProducts(); }
+const prodCollapsed = new Set();
+let pgDrag = null;   // {kind:'group'|'item', key}
+
+function prodGroups(){
+  const gs = [], m = new Map();
+  ev().products.forEach(p => {
+    const k = p.name;
+    if(!m.has(k)){ const g = {name:k, items:[]}; m.set(k, g); gs.push(g); }
+    m.get(k).items.push(p);
+  });
+  return gs;
+}
+function applyProdGroups(gs){
+  ev().products = gs.reduce((a,g) => a.concat(g.items), []);
+  save(); renderProducts();
+}
+function moveGroupIdx(i, dir){
+  const gs = prodGroups(), j = i + dir;
+  if(i < 0 || j < 0 || j >= gs.length) return;
+  [gs[i], gs[j]] = [gs[j], gs[i]];
+  applyProdGroups(gs);
+}
+function moveGroupEdge(i, where){
+  const gs = prodGroups();
+  if(i < 0 || i >= gs.length) return;
+  const [g] = gs.splice(i, 1);
+  where === 'top' ? gs.unshift(g) : gs.push(g);
+  applyProdGroups(gs);
+}
+function moveInGroup(id, dir){
+  const gs = prodGroups();
+  for(const g of gs){
+    const i = g.items.findIndex(p => p.id === id);
+    if(i >= 0){
+      const j = i + dir;
+      if(j < 0 || j >= g.items.length) return;
+      [g.items[i], g.items[j]] = [g.items[j], g.items[i]];
+      applyProdGroups(gs); return;
+    }
+  }
+}
+function toggleProdGroup(i){
+  const g = prodGroups()[i]; if(!g) return;
+  prodCollapsed.has(g.name) ? prodCollapsed.delete(g.name) : prodCollapsed.add(g.name);
+  renderProducts();
+}
+function toggleAllProdGroups(){
+  const gs = prodGroups();
+  if(prodCollapsed.size >= gs.length) prodCollapsed.clear();
+  else gs.forEach(g => prodCollapsed.add(g.name));
+  renderProducts();
+}
+function sortProdGroups(){
+  if(!confirm('제품 묶음을 제품명 가나다순으로 정렬할까요?\n(묶음 안 옵션 순서는 그대로 유지됩니다)')) return;
+  const gs = prodGroups().sort((a,b) => a.name.localeCompare(b.name, 'ko'));
+  applyProdGroups(gs);
+}
+
+/* ── 끌어서 순서 바꾸기 ── */
+function pgStart(e, kind, key){
+  pgDrag = {kind, key};
+  const tr = e.target.closest('tr');
+  if(tr) tr.classList.add('dragging');
+  try{ e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', String(key)); }catch(_){}
+}
+function pgEnd(){
+  pgDrag = null;
+  document.querySelectorAll('#prodRows tr').forEach(t => t.classList.remove('dragging','dropinto'));
+}
+function pgOver(e, kind){
+  // 묶음을 끌 때는 옵션 줄 위에 놓아도 그 줄이 속한 묶음 자리로 이동
+  if(!pgDrag || (pgDrag.kind !== kind && pgDrag.kind !== 'group')) return;
+  e.preventDefault();
+  try{ e.dataTransfer.dropEffect = 'move'; }catch(_){}
+  const tr = e.currentTarget;
+  document.querySelectorAll('#prodRows tr.dropinto').forEach(t => { if(t !== tr) t.classList.remove('dropinto'); });
+  tr.classList.add('dropinto');
+}
+function pgLeave(e){ e.currentTarget.classList.remove('dropinto'); }
+function pgDropGroup(e, toIdx){
+  e.preventDefault();
+  if(!pgDrag || pgDrag.kind !== 'group'){ pgEnd(); return; }
+  const from = +pgDrag.key;
+  if(from === toIdx){ pgEnd(); return; }
+  const gs = prodGroups();
+  if(from < 0 || from >= gs.length || toIdx < 0 || toIdx >= gs.length){ pgEnd(); return; }
+  const [g] = gs.splice(from, 1);
+  gs.splice(toIdx, 0, g);
+  pgEnd(); applyProdGroups(gs);
+}
+function pgDropItem(e, toId){
+  e.preventDefault();
+  if(!pgDrag){ pgEnd(); return; }
+  if(pgDrag.kind === 'group'){
+    const idx = prodGroups().findIndex(g => g.items.some(p => p.id === toId));
+    if(idx >= 0){ pgDropGroup(e, idx); return; }
+    pgEnd(); return;
+  }
+  const fromId = pgDrag.key;
+  if(fromId === toId){ pgEnd(); return; }
+  const gs = prodGroups();
+  const g = gs.find(g => g.items.some(p => p.id === fromId));
+  if(!g || !g.items.some(p => p.id === toId)){
+    pgEnd();
+    alert('다른 제품 묶음으로는 옮길 수 없습니다.\n제품명을 바꾸면 그 묶음으로 이동합니다.');
+    return;
+  }
+  const i = g.items.findIndex(p => p.id === fromId);
+  const j = g.items.findIndex(p => p.id === toId);
+  const [it] = g.items.splice(i, 1);
+  g.items.splice(j, 0, it);
+  pgEnd(); applyProdGroups(gs);
+}
+
 function renderProducts(){
-  $('prodEvName').textContent='· '+ev().name;
-  const tb=$('prodRows'); tb.innerHTML='';
-  $('prodEmpty').style.display=ev().products.length?'none':'';
-  ev().products.forEach(p=>{
-    tb.insertAdjacentHTML('beforeend',`<tr>
+  $('prodEvName').textContent = '· ' + ev().name;
+  const tb = $('prodRows'); tb.innerHTML = '';
+  const gs = prodGroups();
+  $('prodEmpty').style.display = ev().products.length ? 'none' : '';
+  const fb = $('prodFoldBtn');
+  if(fb) fb.textContent = (gs.length && prodCollapsed.size >= gs.length) ? '전체 펼치기' : '전체 접기';
+
+  gs.forEach((g, gi) => {
+    const closed = prodCollapsed.has(g.name);
+    const stock  = g.items.reduce((a,p) => a + (+p.stock || 0), 0);
+    const sold   = g.items.reduce((a,p) => a + orderedQty(p.id), 0);
+    const hidden = g.items.filter(p => p.visible === false).length;
+    const dots   = g.items.slice(0,10).map(p =>
+      `<span class="dot" style="background:${p.color||'#e0e0e0'}" title="${esc(p.option)||'-'}"></span>`).join('');
+
+    tb.insertAdjacentHTML('beforeend', `<tr class="pgroup" ondragover="pgOver(event,'group')" ondragleave="pgLeave(event)" ondrop="pgDropGroup(event,${gi})">
+      <td colspan="10">
+        <div class="pgh">
+          <span class="grip" draggable="true" ondragstart="pgStart(event,'group',${gi})" ondragend="pgEnd()" title="끌어서 묶음 순서 변경">⣿</span>
+          <button class="fold" onclick="toggleProdGroup(${gi})" title="접기/펼치기">${closed ? '▶' : '▼'}</button>
+          <span class="pgname">${esc(g.name)}</span>
+          <span>${dots}</span>
+          <span class="pgmeta">옵션 ${g.items.length} · 준비 ${stock} · 주문 ${sold}${hidden ? ' · 숨김 ' + hidden : ''}</span>
+          <span class="pgacts">
+            <button class="btn btn-line btn-sm" onclick="moveGroupEdge(${gi},'top')" title="맨 위로">⤒</button>
+            <button class="btn btn-line btn-sm" onclick="moveGroupIdx(${gi},-1)" title="위로">▲</button>
+            <button class="btn btn-line btn-sm" onclick="moveGroupIdx(${gi},1)" title="아래로">▼</button>
+            <button class="btn btn-line btn-sm" onclick="moveGroupEdge(${gi},'bottom')" title="맨 아래로">⤓</button>
+          </span>
+        </div>
+      </td></tr>`);
+
+    if(closed) return;
+
+    g.items.forEach(p => {
+      tb.insertAdjacentHTML('beforeend', `<tr class="pitem" ondragover="pgOver(event,'item')" ondragleave="pgLeave(event)" ondrop="pgDropItem(event,'${p.id}')">
+      <td style="text-align:center;"><span class="grip" draggable="true" ondragstart="pgStart(event,'item','${p.id}')" ondragend="pgEnd()" title="끌어서 묶음 안에서 순서 변경">⣿</span></td>
       <td><input type="color" value="${p.color||'#e0e0e0'}" style="width:34px;height:30px;padding:2px;cursor:pointer;" title="색상 변경" onchange="editField('${p.id}','color',this.value)"></td>
-      <td><input type="text" value="${esc(p.name)}" style="width:150px;font-weight:700;" onchange="editField('${p.id}','name',this.value)"></td>
+      <td><input type="text" value="${esc(p.name)}" style="width:150px;font-weight:700;" title="제품명을 바꾸면 그 이름의 묶음으로 이동합니다" onchange="editField('${p.id}','name',this.value)"></td>
       <td><input type="text" value="${esc(p.option)}" placeholder="-" style="width:100px;" onchange="editField('${p.id}','option',this.value)"></td>
       <td class="num"><input type="number" value="${p.listPrice||0}" min="0" style="width:90px;text-align:right;color:#999;" title="정가(할인 전, 0이면 미표시)" onchange="editField('${p.id}','listPrice',this.value)"></td>
       <td class="num"><input type="number" value="${p.price}" min="0" style="width:90px;text-align:right;font-weight:700;" onchange="editField('${p.id}','price',this.value)"></td>
       <td class="num"><input type="number" value="${p.ship||0}" min="0" style="width:80px;text-align:right;" onchange="editField('${p.id}','ship',this.value)"></td>
       <td class="num"><input type="number" value="${p.stock}" min="0" style="width:80px;text-align:right;" onchange="editField('${p.id}','stock',this.value)"></td>
       <td><span class="pill ${p.visible===false?'p-gray':'p-green'}" style="cursor:pointer;" onclick="toggleVisible('${p.id}')">${p.visible===false?'숨김':'노출'}</span></td>
-      <td style="white-space:nowrap;"><button class="btn btn-line btn-sm" onclick="moveProduct('${p.id}',-1)" title="위로">▲</button> <button class="btn btn-line btn-sm" onclick="moveProduct('${p.id}',1)" title="아래로">▼</button> <button class="btn btn-red btn-sm" onclick="delProduct('${p.id}')">삭제</button></td></tr>`);
+      <td style="white-space:nowrap;"><button class="btn btn-line btn-sm" onclick="moveInGroup('${p.id}',-1)" title="묶음 안에서 위로">▲</button> <button class="btn btn-line btn-sm" onclick="moveInGroup('${p.id}',1)" title="묶음 안에서 아래로">▼</button> <button class="btn btn-red btn-sm" onclick="delProduct('${p.id}')">삭제</button></td></tr>`);
+    });
   });
 }
 function copyProducts(){
